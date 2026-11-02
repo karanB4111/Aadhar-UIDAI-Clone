@@ -1,0 +1,2 @@
+experiment,run_id,requests,ok,errors,error_rate_pct,first_error_s,last_error_s,error_window_s,last_failed_target_s,rejoin_s,p50_latency_ms,p95_latency_ms,p99_latency_ms,max_latency_ms,count_timeout,count_conn_error,count_http_5xx,count_http_other
+local,local-r01-app-a,1200,1200,0,0.0,,,,-0.516,1.303,14.7,2015.5,2026.2,2029.0,0,0,0,0

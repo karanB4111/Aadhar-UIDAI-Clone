@@ -1,0 +1,26 @@
+{
+  "experiment": "local",
+  "run_id": "local-r01-app-a",
+  "requests": 1200,
+  "ok": 1200,
+  "errors": 0,
+  "error_rate_pct": 0.0,
+  "counts_by_class": {
+    "timeout": 0,
+    "conn_error": 0,
+    "http_5xx": 0,
+    "http_other": 0
+  },
+  "t_inject_ms": 1793615564809,
+  "t_restore_ms": 1793615589190,
+  "first_error_s": null,
+  "last_error_s": null,
+  "error_window_s": null,
+  "last_failed_target_s": -0.516,
+  "rejoin_s": 1.303,
+  "p50_latency_ms": 14.7,
+  "p95_latency_ms": 2015.5,
+  "p99_latency_ms": 2026.2,
+  "max_latency_ms": 2029.0,
+  "notes": ""
+}
