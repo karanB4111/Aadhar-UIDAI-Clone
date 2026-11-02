@@ -15,6 +15,7 @@ built to measure high availability and disaster recovery. Synthetic data only.
 | [PLAN.md](PLAN.md) | Steps, owners, reviewers, decisions D1–D10, and **current progress** (Status column, section 6) |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | The design. The table at its top maps each PLAN step to the sections it needs. |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Git workflow, Terraform, Docker and results rules |
+| [HANDOFF.md](HANDOFF.md) | Shared AWS values, laptop setup, how to apply/destroy each stack, current live state |
 | `<folder>/README.md` | What belongs in each folder and which step fills it |
 
 ## Before you start a task

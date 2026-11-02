@@ -29,6 +29,9 @@ Rules (CONTRIBUTING.md): one person applies, `terraform fmt` and
 every session. `global/` is the only stack that stays up between
 sessions, and only until step 12.
 
+Taking over on a new laptop, or looking up the current image tag or
+state bucket: see [HANDOFF.md](../HANDOFF.md).
+
 Steps 8 (ASG), 11 (Tier 3 + Route 53) and 12 (destroy) will add
 `modules/app_asg/`, `modules/dns_failover/`, `global/dns/` and
 `envs/tier2/`, `envs/tier3/`.

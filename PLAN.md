@@ -8,6 +8,11 @@ Jeel's review, step 3 for Kanu's, step 4 for Khushi's, step 5 for Jeel's
 and step 6 for Kanu's. Next up: step 7 (Khushi). The live tracker is the
 **Status** column in [section 6](#6-work-steps-after-approval).
 
+**Taking over on a new laptop / AWS setup:** see [HANDOFF.md](HANDOFF.md).
+It has the shared AWS values (account id, state bucket, ECR URL, current
+image tag), the one-time credential setup, and the exact commands to
+apply or destroy each stack.
+
 This plan restates what the course asks for, flags gaps in our Week 2 report,
 lists the decisions we need to make, and splits the build into small steps,
 each with an owner.
