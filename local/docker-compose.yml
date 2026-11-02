@@ -1,0 +1,73 @@
+# Local two-instance rehearsal (PLAN step 3). Stands in for the AWS Tier 1
+# stack (ARCHITECTURE.md 5.2) on a laptop: two copies of the service image
+# behind nginx, where nginx plays the ALB.
+#
+# Build the image first (service/README.md):
+#   cd service
+#   TAG=$(git rev-parse --short HEAD)
+#   docker buildx build --platform linux/amd64 --load -t aadhaar-mock:$TAG .
+#
+# Then from this folder:
+#   TAG=$(git rev-parse --short HEAD) docker compose up
+#   curl localhost:8080/health            # answered by whichever app is up
+#   curl -s localhost:8080/ | jq .az      # shows ap-south-1a or 1b, alternating
+#
+# For E1 (process stopped), use:
+#   docker compose stop app-a
+# `restart: "no"` means it stays down until `docker compose start app-a`.
+#
+# Shut everything down:
+#   docker compose down
+
+services:
+  app-a:
+    image: aadhaar-mock:${TAG:-dev}
+    container_name: aadhaar-app-a
+    # No restart policy (local/README.md, ARCHITECTURE 5.1.1): a stopped
+    # container stays down, like the "process stopped" case in E1.
+    restart: "no"
+    environment:
+      INSTANCE_ID: i-local-a
+      AZ: ap-south-1a
+      REGION: ap-south-1
+      APP_VERSION: ${TAG:-dev}
+    networks:
+      - appnet
+    # Health is reported by the image's built-in HEALTHCHECK (service/Dockerfile).
+
+  app-b:
+    image: aadhaar-mock:${TAG:-dev}
+    container_name: aadhaar-app-b
+    restart: "no"
+    environment:
+      INSTANCE_ID: i-local-b
+      AZ: ap-south-1b
+      REGION: ap-south-1
+      APP_VERSION: ${TAG:-dev}
+    networks:
+      - appnet
+
+  lb:
+    image: nginx:1.27-alpine
+    container_name: aadhaar-lb
+    restart: "no"
+    # Only the LB is exposed on the host; the app containers stay on the
+    # compose network, as the ALB subnets do on AWS (ARCHITECTURE 6.1).
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      # Wait for at least one app to be healthy before starting nginx, so
+      # the first probe does not race the container boot. The image's
+      # HEALTHCHECK (service/Dockerfile) is what compose polls here.
+      app-a:
+        condition: service_healthy
+      app-b:
+        condition: service_healthy
+    networks:
+      - appnet
+
+networks:
+  appnet:
+    driver: bridge

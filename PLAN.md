@@ -3,8 +3,8 @@
 **Status:** Approved by all three members on 2026-11-02. Decisions D1–D10
 recorded (see [Approval](#7-approval)).
 
-**Progress (updated 2026-11-02):** steps 0–2 done. Step 2 is waiting for
-Jeel's review. Next up: step 3 (Khushi), then step 4 (Kanu). Step 6 (Jeel) can
+**Progress (updated 2026-11-02):** steps 0–3 done. Step 2 is waiting for
+Jeel's review and step 3 for Kanu's. Next up: step 4 (Kanu). Step 6 (Jeel) can
 start in parallel. The live tracker is the **Status** column in
 [section 6](#6-work-steps-after-approval).
 
@@ -172,7 +172,7 @@ project stands, for all three of us and for any AI agent working in the repo.
 | 0 | Approve this plan, record decisions D1–D10 | All | All | Section 7 ticked by all three | ✅ Done `53d1c99` |
 | 1 | Repo layout, README, contribution notes | Khushi | Kanu | Folders and conventions merged | ✅ Done `81f92c9` · review pending (Kanu) |
 | 2 | FastAPI mock service: `/`, `/health`, `/api/v1/authenticate`, responses include instance ID and AZ; Dockerfile | Kanu | Jeel | Runs locally in Docker | ✅ Done `ec3e49e` · review pending (Jeel) |
-| 3 | Local two-instance rehearsal (docker compose + nginx) | Khushi | Kanu | Stopping one container shows traffic moving | ⬜ Not started |
+| 3 | Local two-instance rehearsal (docker compose + nginx) | Khushi | Kanu | Stopping one container shows traffic moving | ✅ Done · review pending (Kanu) |
 | 4 | Failover request-loop script (CSV output) | Kanu | Khushi | Produces a CSV against the local setup | ⬜ Not started |
 | 5 | Analysis script: summary + charts from CSV | Khushi | Jeel | Chart generated from step 4 output | ⬜ Not started |
 | 6 | Terraform Tier 1: security groups, 2 EC2 in 1a/1b, ALB, target group, health check, healthy-host alarm | Jeel | Kanu | `terraform apply` gives a working ALB URL | ⬜ Not started |
