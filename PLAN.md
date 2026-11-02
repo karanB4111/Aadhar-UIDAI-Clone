@@ -197,7 +197,7 @@ to your name, or open a GitHub issue.
 |---|---|---|
 | Jeel Thummar | [ ] | |
 | Kanu Bhadaraka | [ ] | |
-| Khushi Pandya | [ ] | |
+| Khushi Pandya | [x] | |
 
 **Final decisions:**
 
