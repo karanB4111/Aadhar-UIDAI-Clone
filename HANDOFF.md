@@ -244,7 +244,7 @@ it up.
 | `bootstrap/` (state bucket) | Applied, stays up | Jeel | 2026-11-02 |
 | `global/ecr/` (repo + replication) | Applied, stays up | Jeel | 2026-11-02 |
 | ECR image `6cc656f` | Pushed | Jeel | 2026-11-02 |
-| `envs/tier1/` | Applied with fast health-checks (ALB `aadhaar-tier1-alb-1335660658`, instances `i-09e04fbc68955b460` az-a, `i-010438766fd85a857` az-b). Used for step 7 E1 + E2. **Next:** re-apply with `terraform.tfvars.e1b` for step 7 E1b, then destroy. | Jeel (apply), Khushi (step 7 runs) | 2026-11-03 |
+| `envs/tier1/` | Applied with the E1b override (slow AWS-default health-checks); step 7 E1 + E2 + E1b runs all done and committed. **Next AWS action (Jeel):** `terraform apply -var-file=terraform.tfvars` to revert to fast hc, then `terraform destroy` to end the session. | Jeel (apply), Khushi (step 7 runs) | 2026-11-03 |
 | `ap-south-2` opt-in | Enabled | Khushi (console) | 2026-11-02 |
 | Budgets alert at USD 10 | **AWS action needed** (confirm it exists) | — | — |
 

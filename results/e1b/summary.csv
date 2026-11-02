@@ -1,0 +1,4 @@
+experiment,run_id,requests,ok,errors,error_rate_pct,first_error_s,last_error_s,error_window_s,last_failed_target_s,rejoin_s,p50_latency_ms,p95_latency_ms,p99_latency_ms,max_latency_ms,count_timeout,count_conn_error,count_http_5xx,count_http_other
+e1b,e1b-r01-az-a,6000,5635,365,6.0833,0.242,36.642,36.4,,,96.0,176.1,355.0,1160.4,0,0,365,0
+e1b,e1b-r02-az-b,6000,5644,356,5.9333,0.345,228.495,228.15,,,102.5,289.2,471.6,1269.2,1,0,355,0
+e1b,e1b-r03-az-a,6000,5648,352,5.8667,0.479,35.824,35.345,,,118.3,333.3,550.4,1220.0,0,0,352,0

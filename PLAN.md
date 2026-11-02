@@ -3,16 +3,17 @@
 **Status:** Approved by all three members on 2026-11-02. Decisions D1–D10
 recorded (see [Approval](#7-approval)).
 
-**Progress (updated 2026-11-03):** steps 0–6 done. Step 2 is waiting for
-Jeel's review, step 3 for Kanu's, step 4 for Khushi's, step 5 for Jeel's
-and step 6 for Kanu's. Step 7 is in progress (Khushi): E1 (5 runs,
-median 11.5 s, all ≤ 15 s pass) and E2 (5 runs, median 12.45 s, 4 of 5
-pass; the fifth is a two-cluster split documented in
-`results/e2/README.md`) are done against the fast-health-check Tier 1
-stack. E1b still needs Jeel to re-apply with
-`infra/envs/tier1/terraform.tfvars.e1b` before it can run. The live
-tracker is the **Status** column in
-[section 6](#6-work-steps-after-approval).
+**Progress (updated 2026-11-03):** steps 0–7 done. Step 2 is waiting for
+Jeel's review, step 3 for Kanu's, step 4 for Khushi's, step 5 for
+Jeel's, step 6 for Kanu's, and step 7 for Jeel's. Step 7 results: E1
+(5 runs, median 11.5 s, all 5 pass), E2 (5 runs, median 12.45 s, 4 of 5
+pass + 1 annotated outlier), E1b (3 runs, median 36.4 s, 2 of 3 pass +
+1 annotated outlier). The two outliers (`e2-r04-az-b`, `e1b-r02-az-b`)
+have the same two-cluster shape: a legitimate primary failover window
+inside the predicted band plus a short local-wifi blip; both are
+documented in each experiment's `results/<e>/README.md`. Next up: step 8
+(Jeel) once he reverts and destroys `envs/tier1`. The live tracker is
+the **Status** column in [section 6](#6-work-steps-after-approval).
 
 **Taking over on a new laptop / AWS setup:** see [HANDOFF.md](HANDOFF.md).
 It has the shared AWS values (account id, state bucket, ECR URL, current
@@ -187,7 +188,7 @@ project stands, for all three of us and for any AI agent working in the repo.
 | 4 | Failover request-loop script (CSV output) | Kanu | Khushi | Produces a CSV against the local setup | ✅ Done `28095cb` · review pending (Khushi) |
 | 5 | Analysis script: summary + charts from CSV | Khushi | Jeel | Chart generated from step 4 output | ✅ Done `<pending>` · review pending (Jeel) |
 | 6 | Terraform Tier 1: security groups, 2 EC2 in 1a/1b, ALB, target group, health check, healthy-host alarm | Jeel | Kanu | `terraform apply` gives a working ALB URL | ✅ Done `1cc9a17` · review pending (Kanu) |
-| 7 | Tier 1 failover tests, **3 runs minimum**, results committed | Khushi | Jeel | CSVs and charts in `results/` | 🟡 In progress (Khushi) — E1 (5/5 pass, median 11.5 s) and E2 (5/5, median 12.45 s; r04 outlier annotated) done against the fast-hc stack; E1b needs Jeel to apply `terraform.tfvars.e1b`. |
+| 7 | Tier 1 failover tests, **3 runs minimum**, results committed | Khushi | Jeel | CSVs and charts in `results/` | ✅ Done `<pending>` · review pending (Jeel) — E1 5/5 pass (median 11.5 s), E2 5/5 (median 12.45 s; `e2-r04-az-b` is an annotated two-cluster outlier), E1b 3/3 (median 36.4 s; `e1b-r02-az-b` same shape). Needs Jeel to revert tier1 to fast hc and `terraform destroy`. |
 | 8 | Tier 2: ASG + scaling policy | Jeel | Khushi | Killed instance is replaced automatically | ⬜ Not started |
 | 9 | Locust load test, latency vs load and instance count | Kanu | Jeel | Load test CSVs and chart | ⬜ Not started |
 | 10 | Report updates: fix G1–G7, new diagrams, measured results, actual cost + billing screenshot | Khushi | All | Week 3 add-ons ready | ⬜ Not started |

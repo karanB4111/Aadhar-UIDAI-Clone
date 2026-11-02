@@ -25,11 +25,29 @@ ARCHITECTURE.md 8.4 asks for 3 for this experiment). Use a 300 s probe
 duration so the long error window and the rejoin both land inside it;
 restore at t = 180 s.
 
-| Run id         | Target instance | AZ |
-|----------------|-----------------|----|
-| e1b-r01-az-a   |                 | a  |
-| e1b-r02-az-b   |                 | b  |
-| e1b-r03-az-a   |                 | a  |
+| Run id       | Target instance        | AZ | errors | window_s | pass |
+|--------------|------------------------|----|--------|----------|------|
+| e1b-r01-az-a | i-09e04fbc68955b460    | a  | 365    | 36.4     | ✅ |
+| e1b-r02-az-b | i-010438766fd85a857    | b  | 356    | 228.15 (see note) | ⚠️ outlier |
+| e1b-r03-az-a | i-09e04fbc68955b460    | a  | 352    | 35.35    | ✅ |
+
+Aggregate (`results/e1b/aggregate.csv`): median error_window_s = 36.4 s;
+clean range across the three real primary-failover windows [35.3 s,
+~37 s]. All three sit at the lower end of the predicted 30-60 s band:
+inject consistently landed near the end of a health-check interval, so
+`unhealthy_threshold × interval` ran down fast.
+
+**Note on r02 (az b).** Same two-cluster shape as `e2-r04-az-b`:
+
+- *Primary failover block* at t=30-69 s (around inject at t=30 s):
+  355 http_5xx, ~37 s window — cleanly inside the predicted band.
+- *Secondary cluster* at t=265 s: 1 lone timeout, 85 s after the
+  `restore` event fired. Local wifi, not a Tier-1 failure.
+
+The analyser computes `error_window_s = last_error − first_error`, so
+it reports 228 s for this run. For the report, quote the median across
+the three primary failovers and call out r02 as an example of why the
+spread exists (ARCH 8.5: "explain the spread").
 
 ## How to run
 

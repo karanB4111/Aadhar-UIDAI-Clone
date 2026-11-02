@@ -1,0 +1,26 @@
+{
+  "experiment": "e1b",
+  "run_id": "e1b-r02-az-b",
+  "requests": 6000,
+  "ok": 5644,
+  "errors": 356,
+  "error_rate_pct": 5.9333,
+  "counts_by_class": {
+    "timeout": 1,
+    "conn_error": 0,
+    "http_5xx": 355,
+    "http_other": 0
+  },
+  "t_inject_ms": 1793653910955,
+  "t_restore_ms": 1793654061406,
+  "first_error_s": 0.345,
+  "last_error_s": 228.495,
+  "error_window_s": 228.15,
+  "last_failed_target_s": null,
+  "rejoin_s": null,
+  "p50_latency_ms": 102.5,
+  "p95_latency_ms": 289.2,
+  "p99_latency_ms": 471.6,
+  "max_latency_ms": 1269.2,
+  "notes": "Same two-cluster shape as e2-r04. Primary failover block t=30-69s (355 http_5xx), ~37 s window, cleanly inside the predicted 30-60 s band. Secondary: 1 lone timeout at t=265s (85 s after restore), a local wifi blip. The analyser spans both as error_window_s=228 s; the real E1b failover for this run was ~37 s."
+}

@@ -1,0 +1,26 @@
+{
+  "experiment": "e1b",
+  "run_id": "e1b-r01-az-a",
+  "requests": 6000,
+  "ok": 5635,
+  "errors": 365,
+  "error_rate_pct": 6.0833,
+  "counts_by_class": {
+    "timeout": 0,
+    "conn_error": 0,
+    "http_5xx": 365,
+    "http_other": 0
+  },
+  "t_inject_ms": 1793653489626,
+  "t_restore_ms": 1793653639554,
+  "first_error_s": 0.242,
+  "last_error_s": 36.642,
+  "error_window_s": 36.4,
+  "last_failed_target_s": null,
+  "rejoin_s": null,
+  "p50_latency_ms": 96.0,
+  "p95_latency_ms": 176.1,
+  "p99_latency_ms": 355.0,
+  "max_latency_ms": 1160.4,
+  "notes": ""
+}
