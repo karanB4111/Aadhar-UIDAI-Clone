@@ -175,7 +175,7 @@ project stands, for all three of us and for any AI agent working in the repo.
 | 3 | Local two-instance rehearsal (docker compose + nginx) | Khushi | Kanu | Stopping one container shows traffic moving | ✅ Done `f9065c8` · review pending (Kanu) |
 | 4 | Failover request-loop script (CSV output) | Kanu | Khushi | Produces a CSV against the local setup | ✅ Done `28095cb` · review pending (Khushi) |
 | 5 | Analysis script: summary + charts from CSV | Khushi | Jeel | Chart generated from step 4 output | ✅ Done `<pending>` · review pending (Jeel) |
-| 6 | Terraform Tier 1: security groups, 2 EC2 in 1a/1b, ALB, target group, health check, healthy-host alarm | Jeel | Kanu | `terraform apply` gives a working ALB URL | ✅ Done `<pending>` · review pending (Kanu) |
+| 6 | Terraform Tier 1: security groups, 2 EC2 in 1a/1b, ALB, target group, health check, healthy-host alarm | Jeel | Kanu | `terraform apply` gives a working ALB URL | ✅ Done `1cc9a17` · review pending (Kanu) |
 | 7 | Tier 1 failover tests, **3 runs minimum**, results committed | Khushi | Jeel | CSVs and charts in `results/` | ⬜ Not started |
 | 8 | Tier 2: ASG + scaling policy | Jeel | Khushi | Killed instance is replaced automatically | ⬜ Not started |
 | 9 | Locust load test, latency vs load and instance count | Kanu | Jeel | Load test CSVs and chart | ⬜ Not started |
