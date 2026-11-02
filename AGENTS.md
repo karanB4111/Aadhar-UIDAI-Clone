@@ -4,6 +4,7 @@ Read this before changing anything in this repo. It applies to any coding agent
 (Claude Code, Copilot, Cursor, Codex and so on) used by any of the three group
 members.
 
+
 ## What this project is
 
 IT457 Group 17: a scaled-down, Aadhaar-style authentication service on AWS,
