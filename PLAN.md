@@ -1,7 +1,12 @@
-# Project Plan: Aadhaar HA/DR Demo (Draft for Group Approval)
+# Project Plan: Aadhaar HA/DR Demo
 
 **Status:** Approved by all three members on 2026-11-02. Decisions D1–D10
-recorded (see [Approval](#7-approval)). Step 1 can start.
+recorded (see [Approval](#7-approval)).
+
+**Progress (updated 2026-11-02):** steps 0–2 done. Step 2 is waiting for
+Jeel's review. Next up: step 3 (Khushi), then step 4 (Kanu). Step 6 (Jeel) can
+start in parallel. The live tracker is the **Status** column in
+[section 6](#6-work-steps-after-approval).
 
 This plan restates what the course asks for, flags gaps in our Week 2 report,
 lists the decisions we need to make, and splits the build into small steps,
@@ -151,21 +156,32 @@ done. The reviewer checks the step after it lands and raises anything wrong.
 Owners are balanced so every member touches design, build and
 documentation. Roles can be swapped if someone is blocked.
 
-| Step | Work | Owner | Reviewer | Done when |
-|---|---|---|---|---|
-| 0 | Approve this plan, record decisions D1–D10 | All | All | Section 7 ticked by all three |
-| 1 | Repo layout, README, contribution notes | Khushi | Kanu | Folders and conventions merged |
-| 2 | FastAPI mock service: `/`, `/health`, `/api/v1/authenticate`, responses include instance ID and AZ; Dockerfile | Kanu | Jeel | Runs locally in Docker |
-| 3 | Local two-instance rehearsal (docker compose + nginx) | Khushi | Kanu | Stopping one container shows traffic moving |
-| 4 | Failover request-loop script (CSV output) | Kanu | Khushi | Produces a CSV against the local setup |
-| 5 | Analysis script: summary + charts from CSV | Khushi | Jeel | Chart generated from step 4 output |
-| 6 | Terraform Tier 1: security groups, 2 EC2 in 1a/1b, ALB, target group, health check, healthy-host alarm | Jeel | Kanu | `terraform apply` gives a working ALB URL |
-| 7 | Tier 1 failover tests, **3 runs minimum**, results committed | Khushi | Jeel | CSVs and charts in `results/` |
-| 8 | Tier 2: ASG + scaling policy | Jeel | Khushi | Killed instance is replaced automatically |
-| 9 | Locust load test, latency vs load and instance count | Kanu | Jeel | Load test CSVs and chart |
-| 10 | Report updates: fix G1–G7, new diagrams, measured results, actual cost + billing screenshot | Khushi | All | Week 3 add-ons ready |
-| 11 | Tier 3: second region (Hyderabad) + Route 53 failover; needs O1 resolved | Jeel | All | Region failover measured |
-| 12 | `terraform destroy`, confirm the bill | Jeel | Kanu | No resources left running |
+**Keeping the Status column current.** It is the single place to see where the
+project stands, for all three of us and for any AI agent working in the repo.
+
+- ⬜ Not started → 🟡 In progress (your name) → ✅ Done `<commit>` · review
+  pending (reviewer) → ✅ Done `<commit>` · reviewed (reviewer)
+- The owner updates the row in the same commit that finishes the step (or
+  marks 🟡 when starting, so nobody duplicates work). The reviewer changes
+  "review pending" to "reviewed", or adds a link to the issue they raised.
+- Also update the **Progress** line at the top of this file.
+- ⛔ Blocked (reason) is fine too; say what unblocks it.
+
+| Step | Work | Owner | Reviewer | Done when | Status |
+|---|---|---|---|---|---|
+| 0 | Approve this plan, record decisions D1–D10 | All | All | Section 7 ticked by all three | ✅ Done `53d1c99` |
+| 1 | Repo layout, README, contribution notes | Khushi | Kanu | Folders and conventions merged | ✅ Done `81f92c9` · review pending (Kanu) |
+| 2 | FastAPI mock service: `/`, `/health`, `/api/v1/authenticate`, responses include instance ID and AZ; Dockerfile | Kanu | Jeel | Runs locally in Docker | ✅ Done `ec3e49e` · review pending (Jeel) |
+| 3 | Local two-instance rehearsal (docker compose + nginx) | Khushi | Kanu | Stopping one container shows traffic moving | ⬜ Not started |
+| 4 | Failover request-loop script (CSV output) | Kanu | Khushi | Produces a CSV against the local setup | ⬜ Not started |
+| 5 | Analysis script: summary + charts from CSV | Khushi | Jeel | Chart generated from step 4 output | ⬜ Not started |
+| 6 | Terraform Tier 1: security groups, 2 EC2 in 1a/1b, ALB, target group, health check, healthy-host alarm | Jeel | Kanu | `terraform apply` gives a working ALB URL | ⬜ Not started |
+| 7 | Tier 1 failover tests, **3 runs minimum**, results committed | Khushi | Jeel | CSVs and charts in `results/` | ⬜ Not started |
+| 8 | Tier 2: ASG + scaling policy | Jeel | Khushi | Killed instance is replaced automatically | ⬜ Not started |
+| 9 | Locust load test, latency vs load and instance count | Kanu | Jeel | Load test CSVs and chart | ⬜ Not started |
+| 10 | Report updates: fix G1–G7, new diagrams, measured results, actual cost + billing screenshot | Khushi | All | Week 3 add-ons ready | ⬜ Not started |
+| 11 | Tier 3: second region (Hyderabad) + Route 53 failover; needs O1 resolved | Jeel | All | Region failover measured | ⬜ Not started |
+| 12 | `terraform destroy`, confirm the bill | Jeel | Kanu | No resources left running | ⬜ Not started |
 
 **Workload split (steps 1–12, excluding step 0 which is shared):**
 

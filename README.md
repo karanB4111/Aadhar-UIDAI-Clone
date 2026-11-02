@@ -20,10 +20,16 @@ UIDAI.
 Build phase. Decisions D1–D10 are recorded in [PLAN.md](PLAN.md), and the
 detailed design is in [ARCHITECTURE.md](ARCHITECTURE.md).
 
+**Step-by-step progress is tracked in the Status column of
+[PLAN.md section 6](PLAN.md#6-work-steps-after-approval).** Last update
+2026-11-02: steps 0–2 done; the mock service in [service/](service/) builds and
+runs in Docker.
+
 | Tier | What | State |
 |---|---|---|
+| — | Mock service image (shared by every tier) | Done (step 2) |
 | 1 | Two EC2 instances in two AZs of Mumbai behind an ALB | Not started |
-| 2 | Auto Scaling group across three AZs, scaling on request count | Not started |
+| 2 | Auto Scaling group across two AZs (min 1, desired 2, max 2), scaling on request count | Not started |
 | 3 | Second region (Hyderabad) with Route 53 health checks | Not started |
 
 ## Stack
@@ -57,3 +63,5 @@ fills it.
 See [CONTRIBUTING.md](CONTRIBUTING.md). Work goes in step by step, as laid out
 in [PLAN.md](PLAN.md), and each member commits their own steps so the history
 shows who did what.
+
+Using an AI coding agent? Point it at [AGENTS.md](AGENTS.md) first.

@@ -10,9 +10,19 @@ How the three of us work in this repo. The plan and owners are in
    them first.
 3. Commit straight to `main`. Start the message with the step number, for
    example `Step 3: add docker compose and nginx for local rehearsal`.
-4. `git push` when the step is done, then tell the reviewer named in PLAN.md.
-5. The reviewer checks the step after it lands. Problems go in a GitHub issue or
+4. Update your step's row in the Status column of PLAN.md section 6, and the
+   Progress line at the top of PLAN.md, in the same commit. Mark the row
+   🟡 In progress when you start, so nobody duplicates work.
+5. `git push` when the step is done, then tell the reviewer named in PLAN.md.
+6. The reviewer checks the step after it lands, then changes "review pending"
+   to "reviewed" in PLAN.md. Problems go in a GitHub issue or
    a follow-up commit, not a rewrite of history. Never force-push `main`.
+
+## AI agents
+
+If you use an AI coding agent (Claude Code, Copilot, Cursor and so on), it
+should read [AGENTS.md](AGENTS.md) first. The same rules apply to its commits:
+one step per commit, PLAN.md status updated, nothing from "Never commit" below.
 
 ## Never commit
 

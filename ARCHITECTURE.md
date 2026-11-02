@@ -1,6 +1,8 @@
 # Architecture: Aadhaar-Style HA/DR Demo on AWS
 
-**Status:** Draft for group approval. Nothing here is built yet.
+**Status:** Approved with PLAN.md on 2026-11-02. Built so far: the mock service
+(sections 2.1 and 5.1.1, PLAN step 2, in `service/`). Nothing on AWS yet. Step
+progress is tracked in PLAN.md section 6.
 **Prepared:** 31 October 2026. AWS facts were checked against AWS documentation,
 SLA pages and the AWS Price List API between 29 and 31 October 2026.
 
@@ -418,6 +420,13 @@ assumed.
   (`INSTANCE_ID`, `AZ`, `REGION`, `APP_VERSION`). See 6.3 for why.
 - The dataset is loaded at startup, before `/health` returns 200, so slow start is
   not needed.
+- uvicorn's keep-alive is set to 65 s, longer than the ALB's 60 s idle timeout.
+  With uvicorn's default of 5 s, the ALB can reuse a connection the app has just
+  closed and return a 502, which would look like a failover error.
+- As built (step 2): identity is also sent as `X-Instance-Id`, `X-AZ`, `X-Region`
+  and `X-App-Version` headers on every response, errors included. `SIGN_WORK`
+  is the PBKDF2-HMAC-SHA256 iteration count, default 1000. Details in
+  `service/README.md`.
 
 #### 5.1.2 Instance type and the burstable-CPU trap
 
