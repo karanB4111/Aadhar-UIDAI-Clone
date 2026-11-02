@@ -1,7 +1,7 @@
 # Project Plan: Aadhaar HA/DR Demo (Draft for Group Approval)
 
-**Status:** Decisions D1–D10 recorded (see [Approval](#7-approval)). Waiting
-for each member to tick their approval before step 1 starts.
+**Status:** Approved by all three members on 2026-11-02. Decisions D1–D10
+recorded (see [Approval](#7-approval)). Step 1 can start.
 
 This plan restates what the course asks for, flags gaps in our Week 2 report,
 lists the decisions we need to make, and splits the build into small steps,
@@ -99,11 +99,14 @@ EC2 in 1a   EC2 in 1b      (FastAPI in Docker, synthetic data in the image)
 
 ### Tier 2: Self-healing and scaling (should have)
 
-- Replace the standalone instances with an **ASG** (min 2) across 2–3 AZs.
+- Replace the standalone instances with an **ASG** across 2 AZs, **min 1,
+  desired 2, max 2**. This fits inside the default 5-vCPU per-region quota
+  (2 × t3.micro = 4 vCPUs) so we do **not** need to file a quota increase.
 - A failed instance is replaced automatically, which makes the failure matrix
   claim true (fixes G1).
-- Add a target-tracking scaling policy (for example on CPU or requests per
-  target) and run Locust to show scaling behaviour (fixes G4, G5).
+- Add a target-tracking scaling policy (for example on requests per target)
+  and run Locust from a laptop to show scaling behaviour. The demonstrated
+  scale is `desired 1 → desired 2` (fixes G4, G5 within quota limits).
 
 ### Tier 3: Second region (planned, per D4; built after Tier 2 works)
 
@@ -135,7 +138,7 @@ design.
 | D6 | How it runs on EC2 | Docker / systemd | **Docker** (same image locally and on AWS) |
 | D7 | How infrastructure is created | Terraform / CloudFormation / Console clicks | **Terraform** (repeatable, `destroy` keeps cost low, matches the report's "infrastructure as code" point) |
 | D8 | Load-test tool | Locust / k6 | **Locust** (Python) |
-| D9 | AWS account and budget | Whose account, spend cap | Set an **AWS Budgets alert** (for example USD 10) before the first deploy |
+| D9 | AWS account and budget | Whose account, spend cap | Use the group's **free AWS account** (USD 100 sign-up credit). Set an **AWS Budgets alert** at USD 10 actual spend as an early-warning tripwire; the credit covers the planned ~USD 5 build comfortably |
 | D10 | Git workflow | Direct to `main` / branch + pull request | **Branch per step + PR reviewed by one other member** |
 
 ---
@@ -195,8 +198,8 @@ to your name, or open a GitHub issue.
 
 | Member | Approved | Changes requested |
 |---|---|---|
-| Jeel Thummar | [ ] | |
-| Kanu Bhadaraka | [ ] | |
+| Jeel Thummar | [x] | |
+| Kanu Bhadaraka | [x] | |
 | Khushi Pandya | [x] | |
 
 **Final decisions:**
@@ -211,13 +214,23 @@ to your name, or open a GitHub issue.
 | D6 | Docker |
 | D7 | Terraform |
 | D8 | Locust |
-| D9 | Set an AWS Budgets alert (USD 10) before the first deploy |
+| D9 | Group's free AWS account (USD 100 credit); AWS Budgets alert at USD 10 as a tripwire. **No vCPU quota increase will be requested** — we stay within the default 5 vCPUs per region |
 | D10 | Commit directly to `main` |
 
 **Open items:**
 
 | ID | Item | Needed by |
 |---|---|---|
-| O1 | Domain for Route 53 failover: use one we already have, or buy a cheap one. Decide who owns it. | Step 11 |
-| O2 | Whose AWS account we deploy to, and who sets up the budget alert (D9). | Step 6 |
+| O1 | Domain for Route 53 failover: the group will arrange this themselves (own domain or a cheap one). Flag at least a week before step 11. | Step 11 |
+| O2 | ~~Whose AWS account we deploy to~~ — **resolved**: the group's shared free account (USD 100 credit); the account owner handles each AWS console action when Jeel flags it. | — |
 | O3 | Check Hyderabad (`ap-south-2`) pricing and that it offers what we need (t3a instances, ALB) (G6). | Step 11 |
+
+### Working convention: AWS console actions are manual
+
+The group runs AWS actions themselves from the account owner's laptop
+(sign-up, region opt-in, Budgets alert, root MFA, IAM user creation,
+domain purchase and so on). Steps in this plan that need a console action
+will say so explicitly — look for a line starting with **"AWS action
+needed:"**. Terraform `apply` and `destroy` are also run from the account
+owner's laptop (Jeel), one person at a time, per section 7 of
+`ARCHITECTURE.md`.

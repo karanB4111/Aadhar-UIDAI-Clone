@@ -40,19 +40,23 @@ EC2, synthetic data only) in three tiers, and measure how it behaves when parts 
 fail. Tier 1 places two instances in two Availability Zones (AZs) of Mumbai behind an
 Application Load Balancer (ALB) and measures how long users see errors when an
 instance or process dies. Tier 2 replaces the instances with an Auto Scaling group
-(ASG) across three AZs, so failed instances are replaced automatically and capacity
-follows load. Tier 3 copies the stack to Hyderabad and puts Route 53 latency-based
-routing with health checks in front, which makes both regions active, in the same way
-UIDAI runs its two data centres. On paper, the same pattern scaled to UIDAI's stated
-target of 25 to 30 crore authentications a day needs about 21,000 authentications per
-second at peak, and about 42,000 per second of provisioned capacity across two
-regions and six AZs. The SLA maths gives 99.98% for one region, which meets our 99.9%
-build target. Two regions give about 99.996% if a regional failover happens at most
-about twice a month and takes no more than about 1.5 minutes, which meets 99.99% on
-paper. The planned AWS spend is about USD 5.5 including GST if we do not buy a domain,
-which is within the USD 10 budget. The biggest practical risks are the default
-5-vCPU EC2 quota, which blocks Tier 2 until it is raised, the lead time for a domain,
-and forgotten resources.
+(ASG) across two AZs (**min 1, desired 2, max 2**, within the default 5-vCPU
+per-region quota), so failed instances are replaced automatically and capacity
+follows load between 1 and 2 instances. Tier 3 copies the stack to Hyderabad
+(**min 1, desired 2, max 2** there too) and puts Route 53 latency-based routing with
+health checks in front, which makes both regions active, in the same way UIDAI runs
+its two data centres. On paper, the same pattern scaled to UIDAI's stated target of
+25 to 30 crore authentications a day needs about 21,000 authentications per second at
+peak, and about 42,000 per second of provisioned capacity across two regions and six
+AZs. The SLA maths gives 99.98% for one region, which meets our 99.9% build target.
+Two regions give about 99.996% if a regional failover happens at most about twice a
+month and takes no more than about 1.5 minutes, which meets 99.99% on paper. The
+account is the group's **free AWS account with the USD 100 sign-up credit**; the
+planned test spend is about USD 5.5 including GST if we do not buy a domain, well
+within the credit, and the USD 10 Budgets alert is kept as a tripwire. **We will not
+request a vCPU quota increase**; Tier 2's instance count is sized to fit the default
+5-vCPU quota. The biggest practical risks are forgotten resources and the lead time
+for a domain.
 
 | Key number | Value | Basis |
 |---|---|---|
@@ -69,14 +73,16 @@ and forgotten resources.
 | Instance type | t3.micro in both regions, unlimited credit mode | Section 5.1.2 |
 | Failover test load | 20 requests/s, open loop, a new connection per request | Section 3.4 |
 | Runs per failover experiment | 5, reported as median and min–max | Section 8.5 |
-| Planned spend | about USD 5.5 incl. GST with no domain bought; about USD 9.0 with a USD 3 `.click` domain | Section 9.4 |
+| Planned spend | about USD 4 incl. GST with no domain bought; about USD 7.5 with a USD 3 `.click` domain. Hard ceiling: USD 100 free-account credit (D9). | Section 9.4 |
 
 **Decisions this document asks the group to approve**
 
 1. t3.micro in both regions, credits set to unlimited, image built for `linux/amd64`
    (section 5.1.2).
-2. Tier 2 runs across 3 AZs with min 3, desired 3, max 6, and scales on
-   `ALBRequestCountPerTarget` (section 5.3).
+2. Tier 2 runs across 2 AZs with **min 1, desired 2, max 2**, and scales on
+   `ALBRequestCountPerTarget` (section 5.3). The ceiling of 2 is set by the
+   default 5-vCPU per-region quota and the group's choice not to request an
+   increase (D9).
 3. Tier 3 uses latency-based routing with health checks (active-active) rather than
    failover routing. This is P1 in [section 13](#13-proposed-changes-to-approved-decisions).
 4. Images are stored in ECR in Mumbai and replicated to Hyderabad. Nothing is built
@@ -119,9 +125,9 @@ PLAN.md.
 | NFR5 | Region failover | ≤ 2 min when unplanned; zero failed requests when planned | Route 53 plus TTL (4.3) | E6a, E6b |
 | NFR6 | RPO | 0 | Read-only data (D3) | By design |
 | NFR7 | Survive the loss of one AZ at design load without overload | Capacity of N/(N−1) × load | Report 3.3 | E3 |
-| NFR8 | Scale out automatically | 3 → 6 instances; the first new instance serving within 8 min of a load step | The course asks for scaling behaviour [81] | E5b |
+| NFR8 | Scale out automatically | 1 → 2 instances in the live demo (the paper design targets 3 → 6; the live cap is set by the free-account 5-vCPU quota, D9); the new instance serving within 8 min of a load step | The course asks for scaling behaviour [81] | E5b |
 | NFR9 | Latency | Server-side p95 ≤ 100 ms at or below the scaling target; client-side p99 ≤ 2 s | UIDAI answered more than 98% of field requests within 2 s [79]. The server-side value is our own choice. | ALB `TargetResponseTime`, prober |
-| NFR10 | Cost | ≤ USD 10 in total, including tax | D9 | AWS Budgets, final bill |
+| NFR10 | Cost | ≤ USD 100 in total (the free-account credit), including tax; USD 10 Budgets alert as early tripwire | D9 | AWS Budgets, final bill |
 | NFR11 | Reproducible | Every tier is created and destroyed by Terraform; the image is pinned by an immutable tag | D7, report 3.4 | Steps 6, 8, 11, 12 |
 | NFR12 | Data residency | Indian regions only (`ap-south-1`, `ap-south-2`) | Report 5.1 | By design |
 | NFR13 | Security baseline | No inbound path except through the ALB; no SSH; IMDSv2; least-privilege IAM; synthetic data only | Report 3.6 | Review checklist (section 6) |
@@ -132,7 +138,8 @@ PLAN.md.
 - A budget of USD 10 (D9), three members, and the Week 3 build window [81].
 - A single AWS account, still to be chosen (O2).
 - The default EC2 quota for running On-Demand standard instances is **5 vCPUs per
-  region** [48]. Tier 2 needs more (section 10, risk R1).
+  region** [48]. The whole project is sized to fit within this default — no quota
+  increase will be requested (D9, section 10, risk R1).
 - Hyderabad is an opt-in region and must be enabled before use [56].
 - What the Free Tier gives depends on when the account was created (section 9.5).
 - Decisions D1–D10 are approved: FastAPI, Docker, Terraform, Locust, commits straight
@@ -227,17 +234,20 @@ errors and a server-side p95 below twice its low-load value. Tune `SIGN_WORK` so
 R_max lands at about 100–200 requests/s. That keeps every test within what one small
 load generator can drive.
 
-**Scaling settings, derived from R_max:**
+**Scaling settings, derived from R_max** (sized for the free-account 5-vCPU
+quota, so Tier 2 and Tier 3 run with 2 instances maximum per region):
 
 - Target per instance: T = 0.5 × R_max. As an `ALBRequestCountPerTarget` target value
   that is 30 × R_max requests per minute (for example 3,000 when R_max = 100/s).
-- **E5a, fixed-capacity sweep:** total load L = 1.8 × R_max with N = 2, 3, 4 and 6
-  instances, giving per-instance utilisation of 90%, 60%, 45% and 30%.
-- **E5b, autoscaling steps:** 1.5, 2.0, 2.5 and 3.0 × R_max, 10 minutes each, then
-  back down to 1.5. The expected desired capacity is 3, 4, 5 and 6, then a scale-in
-  back to 3.
-- **E3, AZ loss under load:** 1.5 × R_max on three instances, each at T. After one AZ
-  is lost, two instances each carry 0.75 × R_max. This is the 150% rule in action.
+- **E5a, fixed-capacity sweep:** total load L = 0.9 × R_max with N = 1 and N = 2
+  instances, giving per-instance utilisation of 90% and 45%. The sweep is short, but
+  it shows the direction of the response-time curve clearly enough for the report.
+- **E5b, autoscaling step:** one step from 0.8 × R_max to 1.6 × R_max, held
+  10 minutes, then back down. Expected: `desired` moves 1 → 2, then back to 1 after
+  the scale-in cooldown.
+- **E3, AZ loss under load:** 0.8 × R_max on 2 instances (each at 40% of R_max).
+  After one AZ is lost, the survivor carries 0.8 × R_max (80% of R_max). This is the
+  2-AZ 200% rule in action and sits inside the single-instance ceiling.
 
 ### 3.5 Linking the demo to the paper design
 
@@ -568,21 +578,21 @@ alarms and an SNS email topic.
 | Region outage | No | Needs Tier 3 | — |
 | Restoring capacity | Manual | Someone restarts the instance | — |
 
-### 5.3 Tier 2: Auto Scaling group across three AZs
+### 5.3 Tier 2: Auto Scaling group across two AZs (within the free-account quota)
 
 ```
- Load generator (EC2 t3.small, Locust)       Laptop prober
-                 \                             /
-                  v                           v
+                 Laptop prober / laptop Locust
+                                |
+                                v
  +---------------- ap-south-1 (Mumbai), VPC 10.10.0.0/16 ----------------+
- |   Application Load Balancer (nodes in lb-a, lb-b, lb-c)               |
- |            |                    |                    |                |
- |            v                    v                    v                |
- |   +--------------+      +--------------+      +--------------+        |
- |   | t3.micro     |      | t3.micro     |      | t3.micro     |        |
- |   | AZ a (app-a) |      | AZ b (app-b) |      | AZ c (app-c) |        |
- |   +--------------+      +--------------+      +--------------+        |
- |   Auto Scaling group: min 3, desired 3, max 6, ELB health checks      |
+ |   Application Load Balancer (nodes in lb-a, lb-b)                     |
+ |            |                                  |                       |
+ |            v                                  v                       |
+ |   +------------------+               +------------------+             |
+ |   | t3.micro         |               | t3.micro         |             |
+ |   | AZ a (app-a)     |               | AZ b (app-b)     |             |
+ |   +------------------+               +------------------+             |
+ |   Auto Scaling group: min 1, desired 2, max 2, ELB health checks      |
  |   Target tracking: ALBRequestCountPerTarget = 30 x R_max req/min      |
  |                                                                       |
  |   CloudWatch: ALB + ASG group metrics, alarms -> SNS email            |
@@ -591,9 +601,9 @@ alarms and an SNS email topic.
 
 | Setting | Value | Why | Source |
 |---|---|---|---|
-| AZs | 3 (a, b, c) | The report's design; N/(N−1) = 1.5 | Report 3.3 |
-| Min / desired / max | **3 / 3 / 6** | One instance per AZ; room to double for the scaling demo | — |
-| vCPUs needed | 6 × 2 + 2 for refresh surge + 2 for the load generator = **16** | A quota increase is required (R1) | [48] |
+| AZs | **2** (a, b) | The default 5-vCPU per-region quota caps us at 2 × t3.micro (4 vCPUs); a third AZ needs a quota increase we are not requesting (D9) | [48] |
+| Min / desired / max | **1 / 2 / 2** | 2 instances fit the 5-vCPU quota. The scaling demo exercises `desired 1 → desired 2` (E5a) and uses `max 2` as the autoscaler ceiling (E5b). | — |
+| vCPUs needed | 2 × 2 = **4** (within the 5-vCPU default) | No quota increase requested | [48] |
 | Health-check type | `ELB` | Replace instances that fail `/health` | [32] |
 | Health-check grace period | **180 s**. Terraform's default is 300 s and the API's is 0 s. | At least 1.5 × the estimated 120 s from boot to healthy; tune after E4 | [31][66] |
 | Default instance warmup | **120 s** | AWS "strongly recommends" setting it; it is off by default | [34] |
@@ -607,11 +617,13 @@ alarms and an SNS email topic.
 #### 5.3.1 Two AZs or three
 
 With N AZs, surviving the loss of one needs N/(N−1) × peak in total: 200% with two
-AZs, 150% with three (report 3.3). Three AZs with one instance each means losing an AZ
-still leaves two-thirds of capacity, and that is enough when each instance runs at
-its target. The extra cost of the third AZ is one instance plus one more public IP
-for the ALB, about USD 0.022/h (Tier 2 base USD 0.0969/h against Tier 1 USD 0.0747/h,
-section 9.3). **Decision: 3 AZs.**
+AZs, 150% with three (report 3.3). Three AZs with one instance each gives the better
+headroom, but it needs at least 3 × 2 = 6 vCPUs, which exceeds the default 5-vCPU
+per-region quota. Since the group has chosen not to request a quota increase (D9),
+**Tier 2 runs across 2 AZs**, with the 200% rule explicit in the report: at Tier 2's
+design load each instance runs at ≤ 50% of R_max, so losing one AZ leaves the
+survivor at ≤ 100%. The 3-AZ layout is kept as the paper design in section 3.3,
+alongside the 2 × peak total-provisioned rule.
 
 #### 5.3.2 Scaling metric: CPU or request count
 
@@ -628,17 +640,24 @@ section 9.3). **Decision: 3 AZs.**
 
 #### 5.3.3 Making scaling visible in a short demo
 
+The quota caps us at 2 instances, so the demo shows the **1 → 2 transition**
+clearly, not a full 3 → 6 ramp.
+
 1. **Calibrate first (E0).** Use `SIGN_WORK` so that a known rate saturates one
-   instance.
-2. **Set the target at 50% of R_max**, so each load step adds whole instances.
+   instance (ASG set to min 1 / desired 1 / max 1 for this run).
+2. **Set the target at 50% of R_max**, so crossing it triggers the single scale-out
+   step from 1 to 2.
 3. **Hold each load step for at least 10 minutes**, because scale-out takes about
    5–8 minutes (ESTIMATE, 4.3).
-4. **Run the fixed-capacity sweep (E5a)** to produce the course's "response time
-   against instance count" chart [81] without waiting for the autoscaler.
+4. **Run the fixed-capacity sweep (E5a)** with N = 1 and N = 2 to produce the
+   course's "response time against instance count" chart [81] without waiting for the
+   autoscaler.
 5. **Plot on one timeline:** group metrics, `RequestCountPerTarget` and the p95 of
    `TargetResponseTime`.
 6. **Keep unlimited credits on**, and check `CPUSurplusCreditBalance` after each run.
-7. **Optional:** repeat E5a on c7g.medium for a credit-free comparison.
+7. **The report must say explicitly** that the 1 → 2 scaling demo stands in for the
+   paper design's 3 → 6, because the free-account quota caps the live demo at
+   2 instances. The autoscaling mechanism is the same.
 
 #### 5.3.4 Where to run Locust
 
@@ -647,30 +666,38 @@ section 9.3). **Decision: 3 AZs.**
 | Network jitter | High: shared Wi-Fi and NAT | Low: AWS network |
 | Client CPU | Laptop is doing other work; Locust warns when it is CPU-bound [68] | Dedicated machine |
 | What the latency means | The user's view, including the Internet | Close to ALB plus server time |
-| Cost and quota | Free | t3.small, about USD 0.028/h including its public IP [4][6]; uses 2 vCPUs of quota |
+| Cost and quota | Free | t3.small, about USD 0.028/h including its public IP [4][6]; **uses 2 vCPUs of quota, which would push Tier 2 (4 vCPUs) over the 5-vCPU default** |
 
 **Decision**
 
-- Run **E0, E5a and E5b from an EC2 load generator** (a t3.small, unlimited, in
-  `ap-south-1`).
-- Run the **failover probes (E1–E4, E6) from a laptop**, which gives the user's view.
-- Always record the ALB's `TargetResponseTime` as the server-side check.
+- **Run every load and failover test from a laptop.** An EC2 load generator would
+  put the total vCPU need at 6 (4 app + 2 generator) and exceed the default
+  5-vCPU quota. Since D9 keeps us within the default quota, the EC2 generator is
+  dropped.
+- The target rates (E0 at 100–200 req/s, E5 at up to 3 × R_max) are modest enough
+  that a laptop running `FastHttpUser` can drive them, provided the laptop is on
+  wired or a lightly loaded Wi-Fi and no other heavy process is running.
+- Always record the ALB's `TargetResponseTime` as the server-side check, so laptop
+  jitter does not corrupt the latency numbers that matter.
 
 **Validity checks for every load run**
 
-- The achieved rate is within 5% of the target rate.
+- The achieved rate is within 5% of the target rate (if it is not, lower the target
+  and rerun; do not report a run that fell short).
 - Locust gives no CPU warnings.
 - Use `FastHttpUser`. One process can reach thousands of requests per second, against
   about 4,000 at best for `HttpUser` [68].
 - Run one worker per core if more is needed [69].
 - Pace users at a fixed rate (Locust's constant-throughput wait time) rather than
   waiting for each response.
+- Prefer wired Ethernet; disable VPN, backups and OS updates during the run; close
+  other browsers and video calls.
 
 | Failure in Tier 2 | Survived? | Expected effect | Test |
 |---|---|---|---|
 | Instance fails | Yes | 5–12 s of errors on its share, then the ASG replaces it in 1.5–3 min (ESTIMATE) | E4 |
-| AZ network loss | Yes | Two AZs carry the load at 75% of R_max; the ASG keeps relaunching into the cut-off AZ until it is excluded (8.6) | E3 |
-| Load surge | Yes, with a delay | Latency rises until scale-out (about 5–8 min) | E5b |
+| AZ network loss | Partly | The surviving AZ carries 100% of load. At the Tier 2 design load (≤ 50% of R_max per instance) that is still within the one-instance ceiling; at higher load the survivor saturates. The ASG keeps relaunching into the cut-off AZ until it is excluded (8.6). | E3 |
+| Load surge | Yes, up to 2 × R_max | Latency rises until the single scale-out step completes (about 5–8 min). Beyond 2 × R_max the ASG is at `max 2` and cannot scale further. | E5b |
 | Bad deployment | Yes, if caught | Instance refresh rolls back when the 5xx alarm fires | E7 (optional) |
 | Region outage | No | Needs Tier 3 | — |
 
@@ -687,8 +714,8 @@ section 9.3). **Decision: 3 AZs.**
                  |                                    |
                  v                                    v
  +--- ap-south-1 (Mumbai) ---+        +--- ap-south-2 (Hyderabad) ---+
- | ALB, 3 AZs                |        | ALB, 3 AZs                   |
- | ASG min 2 / max 4         |        | ASG min 2 / max 4            |
+ | ALB, 2 AZs                |        | ALB, 2 AZs                   |
+ | ASG min 1 / des 2 / max 2 |        | ASG min 1 / des 2 / max 2    |
  | ECR repo (source) ------------ replication ----> ECR replica      |
  +---------------------------+        +------------------------------+
  CloudWatch alarms on the Route 53 health checks live in us-east-1.
@@ -696,7 +723,7 @@ section 9.3). **Decision: 3 AZs.**
 
 | Setting | Value | Why | Source |
 |---|---|---|---|
-| Regions | `ap-south-1` and `ap-south-2`, the same module in each, 3 AZs, ASG min 2 / max 4 | Same design in both regions; min 2 uses 4 vCPUs, which fits within Hyderabad's default 5-vCPU quota in steady state | [48] |
+| Regions | `ap-south-1` and `ap-south-2`, the same module in each, **2 AZs**, ASG **min 1 / desired 2 / max 2** | Same design in both regions; each region uses 4 vCPUs, which fits the default 5-vCPU quota (no quota increase requested per D9) | [48] |
 | Records | `api.<domain>` A alias records with latency routing, one per region (set identifier = region), Evaluate Target Health = Yes | Active-active | [42][46] |
 | Health checks | HTTP; target is the ALB's DNS name on port 80; path `/health/deep`; **10 s (fast) interval**; failure threshold **3** (the default); all default checker regions | Detection in 20–45 s | [40][41] |
 | Health-check price | The first 50 checks of AWS endpoints are free. The fast interval is an optional feature at USD 1.00/month per check, prorated. | — | [14] |
@@ -892,7 +919,6 @@ infra/
 └── envs/
     ├── tier1/            # ap-south-1: network + alb + app_static + observability
     ├── tier2/            # ap-south-1: network + alb + app_asg + observability
-    ├── loadgen/          # ap-south-1: one t3.small running Locust (used in E0/E5 only)
     └── tier3/            # Mumbai + Hyderabad (network + alb + app_asg each) + dns_failover
 ```
 
@@ -940,8 +966,8 @@ infra/
 - An ASG that points at `$Latest` cannot roll back [37].
 - An ALB is billed per hour or part hour [12], so many short apply/destroy cycles cost
   more than one long session.
-- Enable Hyderabad and get the quota increases before the first Tier 2 or Tier 3
-  apply (R1, R2).
+- Enable Hyderabad before the first Tier 3 apply (R2). No vCPU quota increase is
+  requested; Tier 2 and Tier 3 are sized to the default 5-vCPU per-region quota (R1).
 
 ---
 
@@ -1023,14 +1049,14 @@ from `t_inject`.
 
 | ID | Tier | What it shows | How we inject the failure | Load | Runs | Pass when |
 |---|---|---|---|---|---|---|
-| E0 | 2 | R_max of one instance | Ramp from 10 to about 400 requests/s over 10 min (ASG min = desired = 1 for this run, scaling off) | Load generator | 2 | Knee point found; `SIGN_WORK` fixed |
+| E0 | 2 | R_max of one instance | Ramp from 10 to about 400 requests/s over 10 min (ASG min = desired = max = 1 for this run, scaling off) | Laptop Locust | 2 | Knee point found; `SIGN_WORK` fixed |
 | E1 | 1 | Failover when the process stops | Stop the container through SSM, leave it down 2 min, then start it | 20/s prober | 5 | Error window ≤ 15 s in all runs (predicted 5–10 s); no errors outside the window; rejoins ≤ 20 s after restart |
 | E1b | 1 | Effect of health-check settings | As E1, with AWS default settings (30 s, healthy 5, unhealthy 2) | 20/s | 3 | Windows fall in the predicted 30–60 s band |
 | E2 | 1 | Failover when an instance stops | `aws ec2 stop-instances` | 20/s | 5 | Error window ≤ 15 s |
-| E3 | 2 | Losing an AZ under load (N/(N−1)) | Attach the deny-all network ACL to `app-a` for 5 min (8.6) | 1.5 × R_max + 20/s prober | 3 | Error window ≤ 15 s; ≤ 1% failed requests over 10 min; server p95 after the loss ≤ 2 × its value before |
+| E3 | 2 | Losing an AZ under load (2-AZ 200% rule) | Attach the deny-all network ACL to `app-a` for 5 min (8.6) | 0.8 × R_max + 20/s prober | 3 | Error window ≤ 15 s; ≤ 1% failed requests over 10 min; server p95 after the loss ≤ 2 × its value before |
 | E4 | 2 | Self-healing | Terminate one instance (or stop its container) | 20/s | 5 | Replacement is InService and healthy within 5 min in all 5 runs; no errors beyond the detection window |
-| E5a | 2 | Response time against instance count | Scaling off; min lowered to 2 for this run; desired N = 2, 3, 4, 6; 5 min per point after warm-up | 1.8 × R_max | 2 sweeps | p95 latency falls from N = 2 to N = 4; chart produced |
-| E5b | 2 | Autoscaling behaviour | Load steps of 1.5, 2.0, 2.5, 3.0, then 1.5 × R_max, 10 min each | Load generator | 2 | Scale-out starts within 5 min of each step; desired capacity goes 3 → 4 → 5 → 6; p95 back under the NFR9 target within 10 min; scale-in back to 3 afterwards |
+| E5a | 2 | Response time against instance count | Scaling off; desired N = 1 and N = 2, 5 min per point after warm-up | 0.9 × R_max, laptop Locust | 2 sweeps | p95 latency at N = 2 is clearly below N = 1; chart produced |
+| E5b | 2 | Autoscaling behaviour | One step from 0.8 × R_max to 1.6 × R_max, 10 min each way | Laptop Locust | 2 | Scale-out starts within 5 min of the step; desired capacity goes 1 → 2; p95 back under the NFR9 target within 10 min; scale-in back to 1 afterwards |
 | E6a | 3 | Planned region evacuation | Invert the Mumbai health check [40] | 20/s | 3 | Zero failed requests; ≥ 95% of requests served by Hyderabad within 90 s |
 | E6b | 3 | Unplanned region loss | Attach the deny-all network ACL to Mumbai's `lb` subnets | 20/s | 5 | Error window ≤ 120 s in at least 4 of 5 runs (predicted 20–105 s); 100% success from Hyderabad afterwards; failback time recorded |
 | E7 (optional) | 2 | Bad-deployment rollback | Instance refresh to an image that fails `/health/deep`, or returns 500s | 20/s | 1 | Automatic rollback completes; errors limited to the refresh window |
@@ -1119,11 +1145,11 @@ Indian accounts pay **18% GST** on top [71].
 
 | Resource | Tier 1 | Tier 2 | Tier 3 | Notes |
 |---|---|---|---|---|
-| EC2 t3.micro (app) | 2 | 3 to 6 | 2 + 2 | Unlimited credits |
-| EC2 t3.small (load generator) | — | 1, only during E0 and E5 | — | — |
+| EC2 t3.micro (app) | 2 | 1 to 2 (ASG min 1 / max 2) | 2 + 2 (one per region, ASG min 1 / max 2) | Unlimited credits |
+| EC2 t3.small (load generator) | — | — | — | Dropped: laptop-only load testing keeps us inside the 5-vCPU quota |
 | EBS gp3, 8 GiB | One per instance | One per instance | One per instance | — |
-| ALB | 1 (2 AZs) | 1 (3 AZs) | 2 (3 AZs each) | — |
-| Public IPv4 addresses | 4 | 6 to 10 | 10 | One per instance plus one per ALB AZ (ASSUMPTION: one node IP per AZ at our load) |
+| ALB | 1 (2 AZs) | 1 (2 AZs) | 2 (2 AZs each) | — |
+| Public IPv4 addresses | 4 | 3 to 4 | 8 | One per instance plus one per ALB AZ (ASSUMPTION: one node IP per AZ at our load) |
 | Route 53 hosted zone | — | — | 1 | Kept for the month |
 | Route 53 health checks | — | — | 2, with the fast interval | — |
 | Domain | — | — | 0 or 1 | See O1 |
@@ -1156,53 +1182,64 @@ Indian accounts pay **18% GST** on top [71].
 ### 9.3 Cost per hour for each tier
 
 Each total below is the sum of these lines. LCUs are 0.8 for the prober's
-20 connections/s, or 1.6 under Locust (processed-bytes dimension).
+20 connections/s, or 1.6 under laptop Locust (processed-bytes dimension).
 
-| Line | Tier 1 | Tier 2 base | Tier 2 under load | Tier 3 |
+| Line | Tier 1 | Tier 2 base (desired 2) | Tier 2 under load (desired 2) | Tier 3 (2 regions × desired 2) |
 |---|---|---|---|---|
-| App instances | 2 × 0.0112 | 3 × 0.0112 | 5 × 0.0112 | 4 × 0.0112 |
-| EBS | 2 × 0.0010 | 3 × 0.0010 | 5 × 0.0010 | 4 × 0.0010 |
-| Public IPv4 addresses | 4 × 0.005 | 6 × 0.005 | 8 × 0.005 | 10 × 0.005 |
+| App instances | 2 × 0.0112 | 2 × 0.0112 | 2 × 0.0112 | 4 × 0.0112 |
+| EBS | 2 × 0.0010 | 2 × 0.0010 | 2 × 0.0010 | 4 × 0.0010 |
+| Public IPv4 addresses | 4 × 0.005 | 4 × 0.005 | 4 × 0.005 | 8 × 0.005 |
 | ALBs | 1 × 0.0239 | 1 × 0.0239 | 1 × 0.0239 | 2 × 0.0239 |
 | LCUs | 0.8 × 0.008 | 0.8 × 0.008 | 1.6 × 0.008 | 0.8 × 0.008 |
-| Surplus CPU credits | — | — | 5 × 0.04 (at 50% CPU) | — |
-| Load generator (t3.small + EBS + IPv4) | — | — | 0.0284 | — |
+| Surplus CPU credits | — | — | 2 × 0.04 (at 50% CPU) | — |
 | Route 53 fast checks | — | — | — | 2 × 1.00 ÷ 730 |
-| **Total, USD/h** | **0.075** | **0.097** | **0.366** | **0.156** |
-| **If left running 24/7 for 730 h** | **≈ 50–55** | **≈ 71** | — | **≈ 114** (+ 0.50 hosted zone) |
+| **Total, USD/h** | **0.075** | **0.075** | **0.162** | **0.139** |
+| **If left running 24/7 for 730 h** | **≈ 55** | **≈ 55** | — | **≈ 101** (+ 0.50 hosted zone) |
 
-The Tier 1 range of 50–55 is idle versus with the prober running all month.
+The whole project is capped at **USD 100 total** (D9: the group's USD 100 sign-up
+credit). The numbers above show that even an all-tier stack left running by mistake
+would eat the credit within about a month, which is why `terraform destroy` after
+every session is a hard rule (R3).
 
 **Correction to the Week 2 report.** The report's USD 30.41 a month (2 × t3a.micro +
 ALB) leaves out **public IPv4**: 4 addresses × USD 0.005 × 730 h = **USD 14.60**. The
 same configuration actually costs about **USD 44.90 a month**, and a 5-hour test costs
 about USD 0.31, not USD 0.21.
 
-### 9.4 Planned test hours against the USD 10 budget
+### 9.4 Planned test hours against the USD 100 budget
+
+The hard ceiling is the group's **USD 100 free-account sign-up credit** (D9).
+A USD 10 Budgets alert is kept as an early tripwire so a forgotten stack is noticed
+well before it eats the credit.
 
 | Item | Hours | USD, before tax |
 |---|---|---|
 | Tier 1: deploy, debug, E1, E1b, E2 | 6 | 0.45 |
-| Tier 2 base: deploy, debug, E3, E4 | 6 | 0.58 |
-| Tier 2 load tests: E0, E5a, E5b | 4 | 1.46 |
-| Tier 3: both regions, DNS, E6a, E6b | 8 | 1.25 |
+| Tier 2: deploy, debug, E3, E4, E0, E5a, E5b | 10 | 0.90 |
+| Tier 3: both regions, DNS, E6a, E6b | 8 | 1.11 |
 | Route 53 hosted zone (one month) | — | 0.50 |
 | FIS, one optional run of 3 action-minutes | — | 0.30 |
 | ECR, S3, replication, miscellaneous | — | 0.10 |
-| **Subtotal** | **24** | **4.64** (USD 5.48 with GST) |
-| Contingency: a Tier 2 stack forgotten for 12 hours | 12 | +1.16 |
-| Domain, if a `.click` is bought through Route 53 | — | +3.00 |
+| **Subtotal** | **24** | **3.36** (USD 3.96 with GST) |
+| Contingency: a Tier 2 stack forgotten for 24 hours | 24 | +1.80 |
+| Domain, if a `.click` is bought through Route 53 (card, not credit) | — | +3.00 |
 
-| Scenario | Before tax | With 18% GST | Within USD 10? |
-|---|---|---|---|
-| No domain bought, no contingency | 4.64 | **5.48** | Yes |
-| No domain bought, with contingency | 5.80 | 6.85 | Yes |
-| `.click` domain, no contingency | 7.64 | 9.02 | Yes, but tight |
-| `.click` domain, with contingency | 8.80 | 10.39 | **No** |
+| Scenario | Before tax | With 18% GST | Within USD 100 credit? | Trips the USD 10 Budgets alert? |
+|---|---|---|---|---|
+| No domain bought, no contingency | 3.36 | **3.96** | Yes, by a wide margin | No |
+| No domain bought, with 24 h forgotten | 5.16 | 6.09 | Yes | No |
+| `.click` domain, no contingency | 6.36 | 7.50 (+ USD 3 card) | Yes | No |
+| Full all-tier stack forgotten for a month | — | ≈ USD 100 | **No — eats the whole credit** | Yes, long before |
 
-**Conclusion:** the plan fits within USD 10 if we avoid buying a domain (O1), or if we
-buy one and never leave a stack running. Each apply/destroy session adds up to one
-extra ALB-hour (USD 0.024) because ALB billing rounds up to the hour [12].
+**Conclusion:** the planned work costs about **USD 4–7 total** against the USD 100
+credit, so the credit covers the whole project — including a domain — with plenty of
+headroom. The real risk is **a forgotten stack running for days or weeks**, which can
+drain the credit (see R3). Each apply/destroy session adds up to one extra ALB-hour
+(USD 0.024) because ALB billing rounds up to the hour [12], but that is negligible
+against the credit.
+
+**This is a course demo, not an operational system.** Every number above is sized
+for one demo session per tier plus debugging, not sustained running.
 
 ### 9.5 Free Tier status (as of 31 October 2026)
 
@@ -1247,9 +1284,9 @@ capital cost.
 
 | # | Risk | Likelihood / impact | Mitigation |
 |---|---|---|---|
-| R1 | The default quota of **5 vCPUs per region** [48] blocks Tier 2, which needs 16 | High / High | Request increases at step 0: 16 vCPUs in `ap-south-1` and 8 in `ap-south-2`. Fallback: Tier 2 on t2.micro (1 vCPU, Mumbai only) or c7g.medium. |
+| R1 | ~~Default 5-vCPU quota blocks Tier 2~~ — **resolved by design**: Tier 2 is sized at min 1 / desired 2 / max 2 (4 vCPUs), and the laptop runs Locust. No quota increase is requested (D9). The cost is a smaller live scaling demo (1 → 2 instead of 3 → 6); the full 3-AZ design stays on paper. | — / — | — |
 | R2 | Hyderabad not enabled, or the account plan restricts services | Medium / High | Enable the region and check the plan type now (O2) |
-| R3 | A forgotten stack eats the budget | Medium / Medium | Budget alerts (P2), `terraform destroy` after every session, an end-of-day check by tag, only the `global/` stack kept |
+| R3 | A forgotten stack eats the USD 100 credit | **High / High** | Budgets alert at USD 10 actual spend as an early tripwire; `terraform destroy` after every session; an end-of-day check by tag (`Project`); only the `global/` stack is kept running |
 | R4 | Domain delegation takes time | Medium / Medium | Create the hosted zone and delegation at least a week before step 11, and keep the zone |
 | R5 | Burstable credits distort measurements | Medium / Medium | Unlimited mode, scaling on request count, credit metrics exported (5.1.2) |
 | R6 | Health checks fail under load and cascade | Medium / High | Cheap `/health`, 2 workers, watch `UnHealthyHostCount`, adjust thresholds if needed (5.2) |
@@ -1327,22 +1364,26 @@ as the fallback.
 
 ### O2: Whose AWS account, and who sets up the budget
 
-We cannot see your accounts, so here is a checklist for picking one:
+**Resolved:** the group uses its **shared free AWS account with the USD 100 sign-up
+credit** (D9). The account owner performs every AWS console action manually from
+their laptop; Jeel owns the infrastructure steps and flags when an action is needed
+with an **"AWS action needed:"** note in `PLAN.md` or in chat.
 
-1. **Check the account's creation date and plan.** Accounts created before 15 July 2025
-   no longer have the 12-month Free Tier (always-free allowances still apply). Newer accounts may have credits (9.5). Prefer a
-   **Paid-plan** account. Credits still apply to it, it has every service, and it does
-   not close when a Free plan expires [23].
-2. **Enable `ap-south-2`** [56].
-3. **Request vCPU quota increases** (16 in `ap-south-1`, 8 in `ap-south-2`) on the
-   same day (R1).
-4. **Create the D9 budget before anything is deployed** (P2). On a new account this
-   also earns credit [24].
-5. **Create one named user per member with MFA** (6.4). Put MFA on the root user and
-   give it no access keys.
+Setup checklist for the account owner (one-time, before step 6):
 
-**Suggested default:** the member who owns the infrastructure steps (6, 8, 11 and 12
-in PLAN.md) owns the account and the budget. The group decides.
+1. **Confirm the account's plan is the post-15-July-2025 Free plan** with the USD 100
+   credit intact [23]. Note the credit expiry date (12 months from account
+   creation) [12].
+2. **Enable `ap-south-2`** [56] (needed from step 11 onwards; enabling is free).
+3. **Do not request any vCPU quota increase.** Tier 2 and Tier 3 are sized to fit
+   within the default 5-vCPU per-region quota (R1).
+4. **Create the D9 Budgets alert** before anything is deployed: USD 10 actual-spend
+   tripwire with email to all three members, plus a USD 50 forecast alert as a
+   second line of defence (the real ceiling is the USD 100 credit, but we want
+   warnings long before). On a new account this activity also earns extra
+   credit [24].
+5. **Create one named IAM user per member with MFA** (6.4). Put MFA on the root user
+   and give it no access keys.
 
 ### O3: Hyderabad prices and services
 
@@ -1363,21 +1404,28 @@ Answered in 5.4.5:
 | # | Affects | Proposed change | Reasoning |
 |---|---|---|---|
 | **P1** | D4 (how PLAN step 11 describes Tier 3) | Use **latency-based routing with health checks** (active-active) instead of failover routing (active-passive) | Route 53 defines failover routing as active-passive and every other policy with health checks as active-active [42]. Our report (3.1–3.2) and Aadhaar's two sites are active-active. The failover measurement and the cost are the same either way, because alias queries are free. If the group keeps failover routing, the report must describe Tier 3 as active-passive (warm standby). |
-| P2 | D9 (a clarification) | Define the USD 10 budget as **total cost including 18% GST and before any credits**, with alerts at USD 2.50, 5.00 and 7.50 actual spend and USD 10 forecast | GST adds 18% [71]. On a new account, credits would hide real usage. Whether Budgets includes tax and credits by default is UNVERIFIED, so check the budget's cost settings. Budgets themselves are free [19]. |
+| P2 | D9 (a clarification) | The hard ceiling is the **USD 100 free-account credit**; the USD 10 Budgets alert is the early tripwire. Define both as **total cost including 18% GST and before credits**, with alerts at USD 2.50, 5.00 and 10 actual spend, and a USD 50 forecast alert. | GST adds 18% [71]. On a new account, credits would hide real usage. Whether Budgets includes tax and credits by default is UNVERIFIED, so check the budget's cost settings. Budgets themselves are free [19]. |
 | P3 | D4 (timing) | **Start O1 now**, in parallel with Tier 1. Building Tier 3 still waits until Tier 2 works. | DNS delegation has a lead time, and the hosted zone must stay stable (5.4.2) |
 | P4 | D6 (an extension) | Fix the image architecture (`linux/amd64`) and the registry (ECR, replicated to Hyderabad); never build images on instances | R8 and R9; recovery should not depend on GitHub, PyPI or Docker Hub |
 
 **Changes to plan details (not D1–D10 decisions):**
 
 - t3a.micro becomes t3.micro (F15).
-- Tier 2 uses 3 AZs with min 3 and max 6 (PLAN said "min 2 across 2–3 AZs").
+- Tier 2 uses **2 AZs with min 1 / desired 2 / max 2**, fitting the default 5-vCPU
+  quota (no quota increase is requested — D9).
+- Tier 3 uses **2 AZs per region with min 1 / desired 2 / max 2**, same reason.
+- All load testing runs from a laptop (an EC2 load generator would push vCPU use
+  over the default quota).
+- The live scaling demo shows the **1 → 2 transition**; the 3 → 6 ramp stays as the
+  paper design in section 3.3.
 - 5 runs per failover experiment instead of 3.
 - The prober runs at 20 requests/s open loop instead of 1 request/s.
-- A vCPU quota request is added to step 0.
 - A custom VPC with separate load-balancer and app subnets.
 - Terraform state in S3 with a lock file.
 - PLAN.md section 3 should drop "plus connection draining" from its RTO, because the
   deregistration delay does not apply to failed health checks [27].
+- **AWS console actions are performed manually by the account owner**; the
+  infrastructure owner (Jeel) flags each one with an "AWS action needed:" note.
 
 ---
 
