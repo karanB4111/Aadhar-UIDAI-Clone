@@ -174,7 +174,7 @@ project stands, for all three of us and for any AI agent working in the repo.
 | 1 | Repo layout, README, contribution notes | Khushi | Kanu | Folders and conventions merged | ✅ Done `81f92c9` · review pending (Kanu) |
 | 2 | FastAPI mock service: `/`, `/health`, `/api/v1/authenticate`, responses include instance ID and AZ; Dockerfile | Kanu | Jeel | Runs locally in Docker | ✅ Done `ec3e49e` · review pending (Jeel) |
 | 3 | Local two-instance rehearsal (docker compose + nginx) | Khushi | Kanu | Stopping one container shows traffic moving | ✅ Done `84a1421` · review pending (Kanu) |
-| 4 | Failover request-loop script (CSV output) | Kanu | Khushi | Produces a CSV against the local setup | ✅ Done · review pending (Khushi) |
+| 4 | Failover request-loop script (CSV output) | Kanu | Khushi | Produces a CSV against the local setup | ✅ Done `457176e` · review pending (Khushi) |
 | 5 | Analysis script: summary + charts from CSV | Khushi | Jeel | Chart generated from step 4 output | ⬜ Not started |
 | 6 | Terraform Tier 1: security groups, 2 EC2 in 1a/1b, ALB, target group, health check, healthy-host alarm | Jeel | Kanu | `terraform apply` gives a working ALB URL | ⬜ Not started |
 | 7 | Tier 1 failover tests, **3 runs minimum**, results committed | Khushi | Jeel | CSVs and charts in `results/` | ⬜ Not started |
