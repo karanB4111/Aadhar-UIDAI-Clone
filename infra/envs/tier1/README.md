@@ -39,3 +39,24 @@ AWS actions needed (console, Jeel):
 - Confirm the SNS email subscription if `alarm_email` was set.
 - `terraform destroy` here at the end of every session. The `global/`
   stack stays up until step 12.
+
+## Step 7: E1b override (slow health checks)
+
+Step 7 (Khushi) runs three Tier 1 failover experiments against this stack:
+E1 and E2 use the fast health-check defaults; E1b needs the AWS default
+settings instead (ARCHITECTURE.md 8.4). The thresholds are variables, so
+no code changes between E1 and E1b — just a second tfvars file:
+
+```
+# once per laptop:
+cp terraform.tfvars.e1b.example terraform.tfvars.e1b
+
+# applied by Jeel before Khushi starts the three E1b runs:
+terraform apply -var-file=terraform.tfvars -var-file=terraform.tfvars.e1b
+
+# reverted back to the fast settings before any further E1/E2 runs:
+terraform apply -var-file=terraform.tfvars
+```
+
+A change to the four `hc_*` values triggers only a target-group update,
+not an EC2 replacement, so the instances keep their ids across the swap.

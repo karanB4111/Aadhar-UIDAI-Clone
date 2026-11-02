@@ -29,12 +29,14 @@ module "alb" {
   vpc_id        = module.network.vpc_id
   lb_subnet_ids = module.network.lb_subnet_ids
   # Explicit AWS defaults (ARCHITECTURE.md 5.2); Terraform's differ.
+  # Values come from variables so step 7 E1b can swap them to AWS defaults
+  # by overriding tfvars rather than editing this file.
   hc_path                = "/health"
-  hc_interval            = 5
-  hc_timeout             = 2
-  hc_healthy_threshold   = 2
-  hc_unhealthy_threshold = 2
-  deregistration_delay   = 15
+  hc_interval            = var.hc_interval
+  hc_timeout             = var.hc_timeout
+  hc_healthy_threshold   = var.hc_healthy_threshold
+  hc_unhealthy_threshold = var.hc_unhealthy_threshold
+  deregistration_delay   = var.deregistration_delay
 }
 
 module "app" {

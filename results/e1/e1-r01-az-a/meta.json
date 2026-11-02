@@ -1,0 +1,59 @@
+{
+  "run_id": "e1-r01-az-a",
+  "url": "http://aadhaar-tier1-alb-1335660658.ap-south-1.elb.amazonaws.com/",
+  "rate_per_s": 20.0,
+  "duration_s": 180.0,
+  "connect_timeout_s": 2.0,
+  "total_timeout_s": 5.0,
+  "new_connection_per_request": true,
+  "actions": [
+    {
+      "at_s": 30.0,
+      "event": "inject_start",
+      "command": "aws ssm send-command --region ap-south-1 --document-name AWS-RunShellScript --instance-ids i-09e04fbc68955b460 --parameters file://C:/Users/Khushi/Desktop/Aadhar-UIDAI-Clone/results/e1/e1-r01-az-a/ssm-inject.json --query Command.CommandId --output text"
+    },
+    {
+      "at_s": 120.0,
+      "event": "restore",
+      "command": "aws ssm send-command --region ap-south-1 --document-name AWS-RunShellScript --instance-ids i-09e04fbc68955b460 --parameters file://C:/Users/Khushi/Desktop/Aadhar-UIDAI-Clone/results/e1/e1-r01-az-a/ssm-restore.json --query Command.CommandId --output text"
+    }
+  ],
+  "git_sha": "f8ff919",
+  "image_tag": "6cc656f",
+  "client_location": "home, Gandhinagar",
+  "client_network": "wifi",
+  "tool_versions": {
+    "prober": "1",
+    "python": "3.12.3",
+    "os": "Windows-11-10.0.26300-SP0"
+  },
+  "extra": {
+    "hc_interval_s": "5",
+    "hc_timeout_s": "2",
+    "hc_healthy_threshold": "2",
+    "hc_unhealthy_threshold": "2",
+    "instance_type": "t3.micro",
+    "target_instance_id": "i-09e04fbc68955b460",
+    "target_az": "a",
+    "experiment": "e1"
+  },
+  "summary": {
+    "started_utc_ms": 1793629141437,
+    "ended_utc_ms": 1793629321390,
+    "requests": 3600,
+    "counts": {
+      "ok": 3483,
+      "timeout": 0,
+      "conn_error": 0,
+      "http_5xx": 117,
+      "http_other": 0
+    },
+    "send_lag_ms": {
+      "p50": 0.5253999843262136,
+      "p99": 3.252799971960485,
+      "max": 33.902700000908226
+    },
+    "actions_not_run": []
+  },
+  "written_utc": "2026-11-02T14:22:01+00:00"
+}

@@ -55,3 +55,34 @@ variable "alarm_email" {
   type        = string
   default     = ""
 }
+
+# Health-check settings. Defaults match ARCHITECTURE.md 5.2 (fast detection,
+# 5-10 s expected error window). E1b overrides these with AWS defaults
+# (interval 30, timeout 5, healthy 5, unhealthy 2) to measure the slower band.
+variable "hc_interval" {
+  description = "ALB target-group health-check interval, seconds."
+  type        = number
+  default     = 5
+}
+
+variable "hc_timeout" {
+  description = "ALB target-group health-check timeout, seconds."
+  type        = number
+  default     = 2
+}
+
+variable "hc_healthy_threshold" {
+  type    = number
+  default = 2
+}
+
+variable "hc_unhealthy_threshold" {
+  type    = number
+  default = 2
+}
+
+variable "deregistration_delay" {
+  description = "Target-group deregistration delay, seconds."
+  type        = number
+  default     = 15
+}

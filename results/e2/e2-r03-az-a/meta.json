@@ -1,0 +1,59 @@
+{
+  "run_id": "e2-r03-az-a",
+  "url": "http://aadhaar-tier1-alb-1335660658.ap-south-1.elb.amazonaws.com/",
+  "rate_per_s": 20.0,
+  "duration_s": 240.0,
+  "connect_timeout_s": 2.0,
+  "total_timeout_s": 5.0,
+  "new_connection_per_request": true,
+  "actions": [
+    {
+      "at_s": 30.0,
+      "event": "inject_start",
+      "command": "aws ec2 stop-instances --region ap-south-1 --instance-ids i-09e04fbc68955b460 --query StoppingInstances[0].CurrentState.Name --output text"
+    },
+    {
+      "at_s": 150.0,
+      "event": "restore",
+      "command": "aws ec2 start-instances --region ap-south-1 --instance-ids i-09e04fbc68955b460 --query StartingInstances[0].CurrentState.Name --output text"
+    }
+  ],
+  "git_sha": "f8ff919",
+  "image_tag": "6cc656f",
+  "client_location": "home, Gandhinagar",
+  "client_network": "wifi",
+  "tool_versions": {
+    "prober": "1",
+    "python": "3.12.3",
+    "os": "Windows-11-10.0.26300-SP0"
+  },
+  "extra": {
+    "hc_interval_s": "5",
+    "hc_timeout_s": "2",
+    "hc_healthy_threshold": "2",
+    "hc_unhealthy_threshold": "2",
+    "instance_type": "t3.micro",
+    "target_instance_id": "i-09e04fbc68955b460",
+    "target_az": "a",
+    "experiment": "e2"
+  },
+  "summary": {
+    "started_utc_ms": 1793645819794,
+    "ended_utc_ms": 1793646059760,
+    "requests": 4800,
+    "counts": {
+      "ok": 4705,
+      "timeout": 37,
+      "conn_error": 0,
+      "http_5xx": 58,
+      "http_other": 0
+    },
+    "send_lag_ms": {
+      "p50": 0.6986999651417136,
+      "p99": 2.5927999522536993,
+      "max": 33.487899927422404
+    },
+    "actions_not_run": []
+  },
+  "written_utc": "2026-11-02T19:00:59+00:00"
+}

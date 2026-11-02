@@ -1,0 +1,11 @@
+metric,n_runs,median,min,max
+error_window_s,5,12.451,9.75,101.351
+first_error_s,5,0.349,-12.914,0.68
+last_error_s,5,13.081,10.099,88.437
+last_failed_target_s,0,,,
+rejoin_s,0,,,
+p50_latency_ms,5,102.3,95.1,111.0
+p95_latency_ms,5,569.6,160.2,908.9
+p99_latency_ms,5,1274.3,250.9,1598.7
+max_latency_ms,5,2815.8,1092.3,4474.5
+error_rate_pct,5,2.583,1.979,3.521

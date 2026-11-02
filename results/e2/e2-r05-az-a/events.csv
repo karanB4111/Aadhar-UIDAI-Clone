@@ -1,0 +1,5 @@
+t_utc_ms,event,detail,run_id
+1793646480575,probe_start,20.0/s to aadhaar-tier1-alb-1335660658.ap-south-1.elb.amazonaws.com,e2-r05-az-a
+1793646513823,inject_start,aws ec2 stop-instances --region ap-south-1 --instance-ids i-09e04fbc68955b460 --query StoppingInstances[0].CurrentState.Name --output text (exit 0),e2-r05-az-a
+1793646634340,restore,aws ec2 start-instances --region ap-south-1 --instance-ids i-09e04fbc68955b460 --query StartingInstances[0].CurrentState.Name --output text (exit 0),e2-r05-az-a
+1793646720534,probe_end,4800 requests scheduled,e2-r05-az-a

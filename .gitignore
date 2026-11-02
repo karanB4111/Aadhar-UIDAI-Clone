@@ -34,3 +34,9 @@ crash.log
 # Project docs (course reports, kept out of the public repo)
 docs/
 plans/
+
+# SSM parameter scratch files that step7_run.ps1 drops into a run dir
+# (used to pass JSON parameters to `aws ssm send-command` via file://; see
+# tests/step7_run.ps1). The injection / restore commands are recorded in
+# events.csv anyway.
+results/**/ssm-*.json

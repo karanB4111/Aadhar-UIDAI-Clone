@@ -1,0 +1,26 @@
+{
+  "experiment": "e2",
+  "run_id": "e2-r04-az-b",
+  "requests": 4800,
+  "ok": 4631,
+  "errors": 169,
+  "error_rate_pct": 3.5208,
+  "counts_by_class": {
+    "timeout": 103,
+    "conn_error": 0,
+    "http_5xx": 66,
+    "http_other": 0
+  },
+  "t_inject_ms": 1793646184280,
+  "t_restore_ms": 1793646303879,
+  "first_error_s": -12.914,
+  "last_error_s": 88.437,
+  "error_window_s": 101.351,
+  "last_failed_target_s": null,
+  "rejoin_s": null,
+  "p50_latency_ms": 111.0,
+  "p95_latency_ms": 908.9,
+  "p99_latency_ms": 1598.7,
+  "max_latency_ms": 2815.8,
+  "notes": "Two error clusters, not one continuous outage. Primary failover block t=20-49s (1 timeout + 66 http_5xx + 80 timeouts near end), ~29s window. Secondary cluster t=120-129s (22 timeouts, 6 s after restore event) was a local wifi blip, not a Tier-1 failure. The analyser treats their span as a single error_window_s = 101.35 s; the real ALB failover window for this run was ~15 s (prober timeouts dominated once the stopped target became a blackhole, matching ARCH 4.3)."
+}

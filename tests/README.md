@@ -5,6 +5,8 @@ Test tooling that drives load and records what clients see.
 ```
 prober.py         failover prober (step 4): open loop, CSV per request
 event.py          log a manual injection or restore to events.csv (step 4)
+step7_run.ps1     one-run driver for E1 / E1b / E2 (step 7, PowerShell)
+step7_run.sh      the same, for bash
 unit/             pytest suite for the prober
 requirements.txt  pytest now; Locust is added in step 9
 ```
@@ -104,6 +106,44 @@ laptop could not keep up and the run is not a true open loop.
   `proxy_connect_timeout` on the stopped app. The ALB does not retry like this,
   so on AWS the same failure shows as 502s on the failed target's share until
   the health check removes it (ARCHITECTURE.md 5.2).
+
+## Step 7: driving E1 / E1b / E2 against the Tier 1 ALB
+
+`step7_run.ps1` (and the bash `step7_run.sh`) is a thin wrapper that calls
+`prober.py` with the right injection commands for each experiment:
+
+- **E1 / E1b** inject with `aws ssm send-command ... docker stop
+  aadhaar-mock` and restore with `docker start aadhaar-mock`.
+- **E2** injects with `aws ec2 stop-instances` and restores with
+  `aws ec2 start-instances`.
+
+Preconditions, in order (details in `results/e1/README.md` and the per-run
+HANDOFF notes):
+
+1. Jeel applies `infra/envs/tier1` on his laptop. For E1 / E2 that is the
+   default fast health-check build; for E1b he applies with
+   `terraform.tfvars.e1b` on top (`infra/envs/tier1/README.md`).
+2. Jeel shares `terraform output -raw alb_dns_name` and
+   `terraform output instance_ids` in the group chat.
+3. On Khushi's laptop:
+
+   ```powershell
+   $env:AWS_PROFILE = 'aadhaar'
+   .\tests\step7_run.ps1 `
+       -Experiment e1 -RunNumber 1 -TargetAz a `
+       -InstanceId <i-...> -AlbDns <alb-dns> -ImageTag <sha> `
+       -Network wired
+   ```
+
+4. After each experiment's runs:
+   ```
+   python analysis\analyze.py --experiment e1
+   ```
+
+Alternate the target between AZ `a` and AZ `b` between runs, and wait at
+least 2 min for everything to be healthy before the next run
+(ARCHITECTURE.md 8.5). The script refuses to overwrite an existing
+`prober.csv`, so a repeated run id fails fast.
 
 ## Unit tests
 
