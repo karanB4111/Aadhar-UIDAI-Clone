@@ -1,0 +1,13 @@
+# Copy to terraform.tfvars and fill in. terraform.tfvars is git-ignored.
+
+# From `terraform output -raw repository_arn` in infra/global/ecr.
+ecr_repository_arn = "arn:aws:ecr:ap-south-1:REPLACE_ACCOUNT_ID:repository/aadhaar-mock"
+
+# From `terraform output -raw repository_url` in infra/global/ecr.
+ecr_repository_url = "REPLACE_ACCOUNT_ID.dkr.ecr.ap-south-1.amazonaws.com/aadhaar-mock"
+
+# Short git SHA of the service image already pushed to ECR.
+image_tag = "80fbe03"
+
+# Optional: email for CloudWatch alarm notifications. Leave as "" to skip.
+alarm_email = ""
