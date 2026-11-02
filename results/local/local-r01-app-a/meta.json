@@ -1,0 +1,54 @@
+{
+  "run_id": "local-r01-app-a",
+  "url": "http://localhost:8080/",
+  "rate_per_s": 20.0,
+  "duration_s": 60.0,
+  "connect_timeout_s": 2.0,
+  "total_timeout_s": 5.0,
+  "new_connection_per_request": true,
+  "actions": [
+    {
+      "at_s": 15.0,
+      "event": "inject_start",
+      "command": "docker compose -f local/docker-compose.yml stop app-a"
+    },
+    {
+      "at_s": 40.0,
+      "event": "restore",
+      "command": "docker compose -f local/docker-compose.yml start app-a"
+    }
+  ],
+  "git_sha": "c9d8b06",
+  "image_tag": "c9d8b06",
+  "client_location": "Kanu laptop, local docker compose",
+  "client_network": "other",
+  "tool_versions": {
+    "prober": "1",
+    "python": "3.13.5",
+    "os": "Windows-11-10.0.26300-SP0"
+  },
+  "extra": {
+    "lb": "nginx-1.27-stand-in",
+    "nginx_max_fails": "1",
+    "nginx_fail_timeout_s": "5"
+  },
+  "summary": {
+    "started_utc_ms": 1793615548842,
+    "ended_utc_ms": 1793615608793,
+    "requests": 1200,
+    "counts": {
+      "ok": 1200,
+      "timeout": 0,
+      "conn_error": 0,
+      "http_5xx": 0,
+      "http_other": 0
+    },
+    "send_lag_ms": {
+      "p50": 0.37180000072112307,
+      "p99": 0.680600000123377,
+      "max": 1.0975000004691537
+    },
+    "actions_not_run": []
+  },
+  "written_utc": "2026-11-02T10:33:28+00:00"
+}

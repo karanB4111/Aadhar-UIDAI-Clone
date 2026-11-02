@@ -1,0 +1,5 @@
+t_utc_ms,event,detail,run_id
+1793615548842,probe_start,20.0/s to localhost,local-r01-app-a
+1793615564809,inject_start,docker compose -f local/docker-compose.yml stop app-a (exit 0),local-r01-app-a
+1793615589190,restore,docker compose -f local/docker-compose.yml start app-a (exit 0),local-r01-app-a
+1793615608793,probe_end,1200 requests scheduled,local-r01-app-a

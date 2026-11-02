@@ -1030,6 +1030,14 @@ Cost alerts come from AWS Budgets, not CloudWatch (D9; see P2 in section 13).
 - One CSV row per request: `t_send_utc_ms`, `t_recv_utc_ms`, `latency_ms`, `status`,
   `error_class` (`timeout`, `conn_error`, `http_5xx`, `http_other`), `instance_id`,
   `az`, `region`, `resolved_ip`, `run_id`.
+- As built (step 4): `tests/prober.py`, standard library only. The CSV has two
+  extra columns: `seq` (the schedule slot, so gaps or late sends show up) and
+  `error_detail` (for example `connect_timeout` or `dns: ...`). The 5 s total
+  timeout is a hard deadline for the whole request, not a per-read timeout.
+  `--action` runs the injection command on the same timeline and logs it to
+  `events.csv` when it returns; `tests/event.py` logs manual injections.
+  `meta.json` also records the send lag against the schedule. Details in
+  `tests/README.md`.
 
 **Event log.** `events.csv` records every action (`inject_start`, `inject_end`,
 `restore` and so on) with its UTC timestamp, taken when the CLI or SSM command
