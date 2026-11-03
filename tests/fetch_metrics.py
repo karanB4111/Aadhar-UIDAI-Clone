@@ -126,7 +126,7 @@ def window_from_meta(run_dir: Path, period: int) -> tuple[datetime, datetime] | 
     if not meta_path.is_file():
         return None
     try:
-        meta = json.loads(meta_path.read_text(encoding="utf-8"))
+        meta = json.loads(meta_path.read_text(encoding="utf-8-sig"))
     except (OSError, ValueError):
         return None
     summary = meta.get("summary") or {}
