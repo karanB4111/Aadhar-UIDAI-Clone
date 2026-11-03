@@ -11,7 +11,9 @@ venv/
 *.tfstate
 *.tfstate.*
 *.tfvars
+*.tfvars.e1b
 !*.tfvars.example
+!*.tfvars.e1b.example
 crash.log
 
 # Secrets and keys
