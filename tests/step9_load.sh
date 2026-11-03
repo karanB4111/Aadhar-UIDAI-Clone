@@ -76,8 +76,13 @@ export LOCUST_ENDPOINT="$endpoint"
 export LOCUST_FACTOR="$factor"
 export LOCUST_TALLY_OUT="$tally_path"
 
+# On Git-Bash / MSYS (Windows), a value like /api/v1/authenticate passed to a
+# native .exe is rewritten into a Windows path (e.g. C:/Program Files/Git/api/..).
+# locust.exe is native, so disable MSYS path conversion for this call, otherwise
+# LOCUST_ENDPOINT and --host reach Locust mangled. No effect on macOS/Linux.
 set +e
-( cd "$repo_root" && locust -f "$locustfile" --headless --host "$alb_url" \
+( cd "$repo_root" && MSYS_NO_PATHCONV=1 MSYS2_ARG_CONV_EXCL='*' \
+    locust -f "$locustfile" --headless --host "$alb_url" \
     --users "$users" --spawn-rate "$spawn_rate" --run-time "$run_time" \
     --csv "$csv_prefix" --csv-full-history --html "$html_path" --only-summary )
 locust_exit=$?

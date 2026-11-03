@@ -63,8 +63,32 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_DATASET = REPO_ROOT / "service" / "data" / "residents.json"
 
 RPS_PER_USER = float(os.environ.get("LOCUST_RPS_PER_USER", "10"))
-ENDPOINT = os.environ.get("LOCUST_ENDPOINT", "/api/v1/authenticate")
 FACTOR = os.environ.get("LOCUST_FACTOR", "otp").lower()
+
+
+def _clean_endpoint(raw: str) -> str:
+    """Return a leading-slash request path, repairing MSYS path mangling.
+
+    On Git-Bash / MSYS a value like ``/api/v1/authenticate`` passed to a native
+    program is rewritten into a Windows path such as
+    ``C:/Program Files/Git/api/v1/authenticate``. If that reaches us, recover the
+    real path from the known API tail rather than hammer the ALB with a 404/又.
+    """
+    ep = (raw or "").strip()
+    if ep.startswith("/"):
+        return ep
+    low = ep.replace("\\", "/").lower()
+    marker = "/api/v1/"
+    i = low.find(marker)
+    if i >= 0:
+        recovered = ep.replace("\\", "/")[i:]
+        print(f"warning: LOCUST_ENDPOINT looked mangled ({raw!r}); using {recovered!r}")
+        return recovered
+    # Last resort: make it a path so requests are at least well-formed.
+    return "/" + ep.lstrip("/")
+
+
+ENDPOINT = _clean_endpoint(os.environ.get("LOCUST_ENDPOINT", "/api/v1/authenticate"))
 
 # Count responses per AZ and per instance, so we can see the 1 -> 2 instance
 # split from the client side (E5a / E5b). Guarded by a lock: FastHttpUser runs

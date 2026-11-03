@@ -48,6 +48,15 @@ def test_user_class_is_paced_and_fast():
     assert callable(locustfile.AuthUser.wait_time)
 
 
+def test_clean_endpoint_recovers_msys_mangling():
+    # Git-Bash rewrites /api/v1/... into a Windows path; recover the real path.
+    clean = locustfile._clean_endpoint
+    assert clean("/api/v1/authenticate") == "/api/v1/authenticate"
+    assert clean("C:/Program Files/Git/api/v1/authenticate") == "/api/v1/authenticate"
+    assert clean("C:\\Program Files\\Git\\api\\v1\\authenticate") == "/api/v1/authenticate"
+    assert clean("health") == "/health"     # bare path still made absolute
+
+
 def test_env_knobs_respected(monkeypatch):
     monkeypatch.setenv("LOCUST_RPS_PER_USER", "7")
     monkeypatch.setenv("LOCUST_ENDPOINT", "/custom")

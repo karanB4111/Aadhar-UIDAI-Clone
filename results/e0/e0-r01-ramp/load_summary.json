@@ -1,0 +1,21 @@
+{
+  "experiment": "e0",
+  "run_id": "e0-r01-ramp",
+  "target_rate_per_s": 400,
+  "achieved_rate_per_s": 353.31,
+  "rate_error_pct": 11.67,
+  "requests": 211681,
+  "failures": 0,
+  "failure_pct": 0.0,
+  "client_p50_ms": 78.0,
+  "client_p95_ms": 120.0,
+  "client_p99_ms": 190.0,
+  "server_p50_ms": null,
+  "server_p95_ms": null,
+  "server_p99_ms": null,
+  "instances_seen": 1,
+  "asg_in_service_min": null,
+  "asg_in_service_max": null,
+  "valid_rate": false,
+  "notes": "achieved rate off target by 11.67% (>5%, 5.3.4); no aws_metrics.csv; server-side latency not available"
+}

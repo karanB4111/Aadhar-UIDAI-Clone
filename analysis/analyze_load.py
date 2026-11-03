@@ -104,7 +104,10 @@ def read_meta(run_dir: Path) -> dict:
     if not p.is_file():
         return {}
     try:
-        return json.loads(p.read_text(encoding="utf-8"))
+        # utf-8-sig: step9_load.ps1 writes meta.json via PowerShell Out-File, which
+        # emits a UTF-8 BOM; plain utf-8 would corrupt the first key and lose
+        # target_rate_per_s (cf. the same fix in tests/fetch_metrics.py).
+        return json.loads(p.read_text(encoding="utf-8-sig"))
     except (OSError, ValueError):
         return {}
 
@@ -133,7 +136,7 @@ def read_served_by(run_dir: Path) -> dict:
     if not p.is_file():
         return {}
     try:
-        return json.loads(p.read_text(encoding="utf-8"))
+        return json.loads(p.read_text(encoding="utf-8-sig"))  # tolerate a BOM
     except (OSError, ValueError):
         return {}
 
