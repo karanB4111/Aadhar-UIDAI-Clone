@@ -108,7 +108,7 @@ Always `git pull` before you start work (PLAN section 6).
 | `infra/bootstrap/` | S3 bucket for Terraform state | Applied **once** per account. Local state. Stays up forever. | Jeel (step 6) |
 | `infra/global/ecr/` | `aadhaar-mock` ECR repo + replication to `ap-south-2` | Long-lived; destroyed only in step 12 | Jeel (step 6) |
 | `infra/envs/tier1/` | Tier 1 VPC + ALB + 2 EC2 | **Apply when working on a Tier 1 step; destroy at end of session** | step 6 Jeel; step 7 Khushi |
-| `infra/envs/tier2/` | Tier 2 ASG stack | Not written yet (step 8, Jeel) | step 8 Jeel; step 9 Kanu |
+| `infra/envs/tier2/` | Tier 2 ASG stack | Written (step 8), not yet applied. **Apply when working on a Tier 2 step; destroy at end of session** | step 8 Jeel; step 9 Kanu |
 | `infra/envs/tier3/` | Two regions + Route 53 | Not written yet (step 11, Jeel) | Jeel (step 11) |
 
 **Hard rule (CONTRIBUTING.md):** `terraform destroy` on `envs/*` at
@@ -244,7 +244,8 @@ it up.
 | `bootstrap/` (state bucket) | Applied, stays up | Jeel | 2026-11-02 |
 | `global/ecr/` (repo + replication) | Applied, stays up | Jeel | 2026-11-02 |
 | ECR image `6cc656f` | Pushed | Jeel | 2026-11-02 |
-| `envs/tier1/` | Applied with the E1b override (slow AWS-default health-checks); step 7 E1 + E2 + E1b runs all done and committed. **Next AWS action (Jeel):** `terraform apply -var-file=terraform.tfvars` to revert to fast hc, then `terraform destroy` to end the session. | Jeel (apply), Khushi (step 7 runs) | 2026-11-03 |
+| `envs/tier1/` | Reverted to fast hc and destroyed at the end of step 7 (2026-11-03). Reapply only if a Tier 1 review needs it. | Jeel (apply), Khushi (step 7 runs) | 2026-11-03 |
+| `envs/tier2/` | Terraform written (step 8). **Next AWS action (Jeel):** `terraform init` + `terraform apply` to bring the ASG up and verify self-healing (see `infra/envs/tier2/README.md`), then `terraform destroy` to end the session. | Jeel | 2026-11-03 |
 | `ap-south-2` opt-in | Enabled | Khushi (console) | 2026-11-02 |
 | Budgets alert at USD 10 | **AWS action needed** (confirm it exists) | — | — |
 

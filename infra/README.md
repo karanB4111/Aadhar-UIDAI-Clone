@@ -13,9 +13,11 @@ modules/
   network/      VPC, IGW, lb/app subnets, public route table, deny-all NACL
   alb/          ALB, listener, target group, alb-sg + app-sg chain
   app_static/   Tier 1: standalone EC2 instances + instance role + ECR pull
-  observability/ SNS topic + Tier 1 CloudWatch alarms
+  app_asg/      Tier 2: launch template + ASG + target-tracking policy (step 8)
+  observability/ SNS topic + Tier 1/2 CloudWatch alarms
 envs/
   tier1/     ap-south-1: network + alb + app_static + observability (step 6)
+  tier2/     ap-south-1: network + alb + app_asg + observability (step 8)
 ```
 
 Apply order on a fresh account:
@@ -32,6 +34,5 @@ sessions, and only until step 12.
 Taking over on a new laptop, or looking up the current image tag or
 state bucket: see [HANDOFF.md](../HANDOFF.md).
 
-Steps 8 (ASG), 11 (Tier 3 + Route 53) and 12 (destroy) will add
-`modules/app_asg/`, `modules/dns_failover/`, `global/dns/` and
-`envs/tier2/`, `envs/tier3/`.
+Steps 11 (Tier 3 + Route 53) and 12 (destroy) will add
+`modules/dns_failover/`, `global/dns/` and `envs/tier3/`.

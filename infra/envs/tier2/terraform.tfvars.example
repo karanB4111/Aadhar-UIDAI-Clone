@@ -1,0 +1,18 @@
+# Copy to terraform.tfvars and fill in. terraform.tfvars is git-ignored.
+
+# From `terraform output -raw repository_arn` in infra/global/ecr.
+ecr_repository_arn = "arn:aws:ecr:ap-south-1:REPLACE_ACCOUNT_ID:repository/aadhaar-mock"
+
+# From `terraform output -raw repository_url` in infra/global/ecr.
+ecr_repository_url = "REPLACE_ACCOUNT_ID.dkr.ecr.ap-south-1.amazonaws.com/aadhaar-mock"
+
+# Short git SHA of the service image already pushed to ECR.
+image_tag = "6cc656f"
+
+# Optional: email for CloudWatch alarm notifications. Leave as "" to skip.
+alarm_email = ""
+
+# Target-tracking policy value (requests/target/minute). Default assumes
+# R_max = 100 req/s and a 50% target (ARCHITECTURE.md 5.3.2). Step 9 (E0)
+# retunes it after calibration.
+# scaling_target_requests_per_minute = 3000
