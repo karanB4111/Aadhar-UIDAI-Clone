@@ -1,7 +1,14 @@
 # analysis/
 
 Scripts that turn the raw CSVs in `results/` into summaries and charts for the
-report. Filled by PLAN step 5 (owner: Khushi, reviewer: Jeel).
+report.
+
+- `analyze.py` — failover prober runs (PLAN step 5, owner: Khushi). Method:
+  ARCHITECTURE.md 8.5. Covers E1 / E1b / E2 / E3 / E4 / E6.
+- `analyze_load.py` — Locust load runs (PLAN step 9, owner: Kanu). Method:
+  ARCHITECTURE.md 5.3.3-5.3.4. Covers E0 / E5a / E5b.
+
+## Failover analysis (`analyze.py`)
 
 Method: ARCHITECTURE.md 8.5.
 
@@ -60,6 +67,35 @@ the "failover" shows as a handful of ~2 s latency spikes rather than a 502
 window (see `tests/README.md` and ARCHITECTURE.md 5.2). The script therefore
 reports `error_window_s` as empty for this run and plots the spikes on the
 timeline. The real ALB numbers will come from step 7.
+
+## Load analysis (`analyze_load.py`)
+
+Reads the Locust CSVs and the fetched `aws_metrics.csv` under
+`results/<experiment>/<run_id>/` (written by `tests/step9_load.ps1` and
+`tests/fetch_metrics.py`) and produces:
+
+```
+results/<experiment>/<run_id>/load_summary.json   per-run metrics
+results/<experiment>/load_summary.csv             one row per run
+results/<experiment>/charts/latency_vs_load.png       (E0)
+results/<experiment>/charts/latency_vs_instances.png  (E5a)
+results/<experiment>/charts/autoscale_timeline.png    (E5b)
+```
+
+Each run reports the achieved vs target rate (with a `valid_rate` flag for the
+5% check, 5.3.4), Locust client-side latency percentiles, and — when
+`aws_metrics.csv` is present — the ALB server-side `TargetResponseTime`
+percentiles and the ASG instance-count range. The report quotes the server-side
+numbers; the client-side ones are shown alongside to expose laptop jitter.
+
+```bash
+# One experiment (picks the chart that fits: e0 / e5a / e5b)
+python analysis/analyze_load.py --experiment e5a
+
+# Everything, or one run
+python analysis/analyze_load.py
+python analysis/analyze_load.py --run-dir results/e5b/e5b-r01-step-up
+```
 
 ## Tests
 

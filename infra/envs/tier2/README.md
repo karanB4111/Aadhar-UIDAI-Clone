@@ -88,8 +88,36 @@ aws ssm send-command --instance-ids "$INSTANCE_ID" \
 Watch `aws autoscaling describe-auto-scaling-groups --auto-scaling-group-names "$ASG"`
 or the CloudWatch `GroupInServiceInstances` metric for the replacement.
 
-AWS actions needed (console, Jeel):
+## Step 9 load test: setting ASG capacity / scaling per experiment
+
+The load test (PLAN step 9, `tests/step9_load.ps1`) drives load from a laptop
+but does **not** change capacity. Set the ASG state in AWS first, per
+ARCHITECTURE.md 5.3.3. Capacity comes from `terraform.tfvars` (`asg_min`,
+`asg_desired`, `asg_max`). The target-tracking policy
+(`aws_autoscaling_policy.request_count`) is always created by `modules/app_asg`,
+so to run with scaling **off** (E0, E5a), pin min=desired=max to fix the count,
+or suspend the scaling processes; for E5b leave room between desired and max and
+keep the processes resumed:
+
+| Exp | What to set before the run | How |
+|---|---|---|
+| E0  | 1 instance, no scaling | `asg_min=asg_desired=asg_max=1`, then `terraform apply`; pinning min=max holds it at 1 even though the policy exists |
+| E5a | fixed N (1, then 2), no scaling | `asg_min=asg_desired=asg_max=N`, apply (two applies: N=1 then N=2); or `aws autoscaling suspend-processes --auto-scaling-group-name <asg> --scaling-processes AlarmNotification` |
+| E5b | min 1 / desired 1 / max 2, scaling **on** | apply with `asg_min=1 asg_desired=1 asg_max=2`, processes resumed. The load step drives desired 1 → 2 |
+
+Share with Kanu after apply: `terraform output -raw alb_dns_name`,
+`terraform output -raw asg_name`, and the ALB / target-group ARN suffixes
+(`app/.../...` and `targetgroup/.../...`, from `aws elbv2 describe-load-balancers`
+/ `describe-target-groups` or the ARNs) for `tests/fetch_metrics.py`.
+
+Hold each E5a point ≥ 5 min and each E5b step ≥ 10 min after warm-up, because
+scale-out takes about 5–8 min (ESTIMATE, 4.3). Keep `unlimited` credit mode on
+and export `CPUSurplusCreditBalance` after each run to prove there was no
+throttling (5.1.2).
+
+AWS actions needed (console / CLI, Jeel):
 
 - Confirm the SNS email subscription if `alarm_email` was set.
+- Set the ASG capacity / scaling for each step-9 experiment (table above).
 - `terraform destroy` here at the end of every session. The `global/`
   stack stays up until step 12.

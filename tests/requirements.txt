@@ -1,3 +1,7 @@
 # The prober (prober.py, event.py) uses the standard library only.
-# These are for its unit tests. Step 9 adds Locust here.
+# These are for its unit tests and the step 9 Locust load test.
 pytest==9.2.0
+
+# Step 9 load test (locustfile.py). Version per ARCHITECTURE.md ref [67]
+# (2.47.0, 21 Oct 2026). FastHttpUser is used for throughput (8.3, 5.3.4).
+locust==2.47.0

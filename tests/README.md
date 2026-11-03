@@ -7,13 +7,17 @@ prober.py         failover prober (step 4): open loop, CSV per request
 event.py          log a manual injection or restore to events.csv (step 4)
 step7_run.ps1     one-run driver for E1 / E1b / E2 (step 7, PowerShell)
 step7_run.sh      the same, for bash
-unit/             pytest suite for the prober
-requirements.txt  pytest now; Locust is added in step 9
+locustfile.py     Locust load test (step 9): FastHttpUser, fixed-rate
+step9_load.ps1    one-point load driver for E0 / E5a / E5b (step 9, PowerShell)
+step9_load.sh     the same, for bash
+fetch_metrics.py  pull ALB + ASG CloudWatch metrics for a run into CSV (step 9)
+unit/             pytest suite for the prober and the locustfile
+requirements.txt  pytest and Locust (2.47.0)
 ```
 
 - **Failover prober** (PLAN step 4, owner: Kanu). Spec: ARCHITECTURE.md 8.3.
-- **Locust file** (PLAN step 9, owner: Kanu). `FastHttpUser`, paced at a fixed
-  rate. Used for calibration (E0) and the scaling experiments (E5a, E5b).
+- **Locust load test** (PLAN step 9, owner: Kanu). `FastHttpUser`, paced at a
+  fixed rate. Used for calibration (E0) and the scaling experiments (E5a, E5b).
 
 Output goes to `results/`, in the layout described in CONTRIBUTING.md.
 
@@ -144,6 +148,91 @@ Alternate the target between AZ `a` and AZ `b` between runs, and wait at
 least 2 min for everything to be healthy before the next run
 (ARCHITECTURE.md 8.5). The script refuses to overwrite an existing
 `prober.csv`, so a repeated run id fails fast.
+
+## Step 9: Locust load test against the Tier 2 ASG (E0 / E5a / E5b)
+
+The load test measures **latency against load** and **against instance count**
+(the Week 3 "scaling behaviour" deliverable, ARCHITECTURE.md 5.3.3-5.3.4, 8.4).
+It runs from a laptop, never an EC2 generator, so the whole project stays inside
+the default 5-vCPU quota (D9, 5.3.4).
+
+`locustfile.py` is a `FastHttpUser` that POSTs to `/api/v1/authenticate` (the
+CPU-bearing endpoint, so `SIGN_WORK`/`R_max` are meaningful) with synthetic
+`TEST-` records, paced with `constant_throughput` so the rate is fixed rather
+than closed-loop. It tallies responses per AZ / instance from the identity
+headers into `served_by.json`.
+
+The three experiments differ only in the ASG capacity/scaling set **in AWS
+first** (Jeel, per 5.3.3) and in the load shape:
+
+| Exp | ASG state before the run | Load | Shows |
+|---|---|---|---|
+| E0  | min=desired=max=1, scaling off | ramp 10 → ~R_max | R_max (the knee); fix `SIGN_WORK` |
+| E5a | desired=N fixed (N=1, then 2), scaling off | 0.9 × R_max, ≥ 5 min | response time vs instance count |
+| E5b | min 1 / des 1 / max 2, scaling **on** | step 0.8 → 1.6 × R_max, 10 min each way | autoscaler moves desired 1 → 2 → 1 |
+
+### Preconditions (in order)
+
+1. `R_max` is known from E0 before you set the E5a/E5b rates (5.3.4).
+2. Jeel applies `infra/envs/tier2` and sets the ASG capacity / scaling for the
+   experiment, then shares `terraform output -raw alb_dns_name`,
+   `terraform output -raw asg_name`, and the ALB / target-group ARN suffixes.
+3. On the load laptop: install deps (below), set `$env:AWS_PROFILE = 'aadhaar'`,
+   go wired or on a quiet Wi-Fi, and turn off VPN / backups / OS updates
+   (5.3.4 validity checks). Sync the clock (NTP).
+
+### Run one point
+
+```powershell
+$env:AWS_PROFILE = 'aadhaar'
+# E5a at N=2 instances, 0.9 x R_max (example R_max = 100/s -> 90/s = 18 users x 5):
+.\tests\step9_load.ps1 -Experiment e5a -RunNumber 2 -RunLabel n2 `
+    -AlbDns <alb-dns> -ImageTag <sha> -Users 18 -RpsPerUser 5 -RunTime 6m -Network wired
+```
+
+Bash twin: `tests/step9_load.sh e5a 2 n2 <alb-dns> <sha> --users 18 --rps-per-user 5 --run-time 6m`.
+
+Total target rate = `Users × RpsPerUser`. The run id is `<exp>-r<NN>-<label>`
+(e.g. `e5a-r02-n2`, `e0-r01-ramp`, `e5b-r01-step-up`). Output lands in
+`results/<experiment>/<run_id>/`:
+
+- `locust_stats.csv`, `locust_stats_history.csv`, `locust_failures.csv`, `locust.html`
+- `served_by.json` — request counts per AZ / instance
+- `meta.json` — rate, host, image tag, network, UTC window
+
+### Pull the server-side metrics (required)
+
+Locust latency carries laptop/Internet jitter. The report quotes the ALB's
+`TargetResponseTime` and the ASG `GroupInServiceInstances` timeline. For the
+same window:
+
+```powershell
+python tests\fetch_metrics.py --run-dir results\e5a\e5a-r02-n2 --region ap-south-1 `
+    --alb app/aadhaar-tier2-alb/<id> --target-group targetgroup/aadhaar-tier2-tg/<id> `
+    --asg <asg_name>
+```
+
+With no `--start/--end` it reads the window out of `meta.json` (padded one
+period). Writes `aws_metrics.csv` and `aws_metrics.json`. ALB metrics are
+60 s data points published only while traffic flows and appear ~1-2 min late,
+so run this a couple of minutes after the load stops.
+
+### Build the charts
+
+```bash
+python analysis/analyze_load.py --experiment e5a   # or e0 / e5b
+```
+
+Produces `results/<exp>/load_summary.csv`, per-run `load_summary.json`, and the
+chart that fits the experiment (`latency_vs_load.png`, `latency_vs_instances.png`
+or `autoscale_timeline.png`) under `results/<exp>/charts/`.
+
+### Validity, before you report a run (5.3.4)
+
+- Achieved req/s within 5% of the target (`analyze_load.py` flags `valid_rate`
+  false otherwise). If it fell short, lower the rate and rerun.
+- No Locust CPU-bound warnings in the console.
+- `served_by.json` / the ASG metric shows the instance count you expected.
 
 ## Unit tests
 
