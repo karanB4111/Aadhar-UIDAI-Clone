@@ -4,7 +4,8 @@
 recorded (see [Approval](#7-approval)).
 
 **Progress (updated 2026-11-03):** steps 0–7 done, step 7 reviewed; step 8
-Terraform (Tier 2 ASG) landed, waiting for Khushi's review. Step 2 is
+Terraform (Tier 2 ASG) landed, applied once on AWS to verify self-healing
+(see step 8 row), then destroyed, waiting for Khushi's review. Step 2 is
 waiting for Jeel's review, step 3 for Kanu's, step 4 for Khushi's, step 5
 for Jeel's, and step 6 for Kanu's. Step 7 results: E1 (5 runs, median
 11.5 s, all 5 pass), E2 (5 runs, median 12.45 s, 4 of 5 pass + 1 annotated
@@ -190,7 +191,7 @@ project stands, for all three of us and for any AI agent working in the repo.
 | 5 | Analysis script: summary + charts from CSV | Khushi | Jeel | Chart generated from step 4 output | ✅ Done `<pending>` · review pending (Jeel) |
 | 6 | Terraform Tier 1: security groups, 2 EC2 in 1a/1b, ALB, target group, health check, healthy-host alarm | Jeel | Kanu | `terraform apply` gives a working ALB URL | ✅ Done `1cc9a17` · review pending (Kanu) |
 | 7 | Tier 1 failover tests, **3 runs minimum**, results committed | Khushi | Jeel | CSVs and charts in `results/` | ✅ Done `0cbeb19` · reviewed (Jeel) — E1 5/5 pass (median 11.5 s), E2 5/5 (median 12.45 s; `e2-r04-az-b` is an annotated two-cluster outlier), E1b 3/3 (median 36.4 s; `e1b-r02-az-b` same shape). Tier 1 stack reverted to fast hc and destroyed. |
-| 8 | Tier 2: ASG + scaling policy | Jeel | Khushi | Killed instance is replaced automatically | ✅ Done `135bfe5` · review pending (Khushi) — `modules/app_asg/` and `envs/tier2/` added; ASG min 1/desired 2/max 2 across AZs a,b, target-tracking on `ALBRequestCountPerTarget`, ELB health checks. Not applied yet (next AWS action for Jeel). |
+| 8 | Tier 2: ASG + scaling policy | Jeel | Khushi | Killed instance is replaced automatically | ✅ Done `135bfe5` · review pending (Khushi) — `modules/app_asg/` and `envs/tier2/` added; ASG min 1/desired 2/max 2 across AZs a,b, target-tracking on `ALBRequestCountPerTarget`, ELB health checks. Applied on AWS 2026-11-03: ASG came up healthy in both AZs. Terminated `i-018673c…` via `terminate-instance-in-auto-scaling-group`; replacement `InService` in 11 s (launch-before-terminate held capacity), ALB target `healthy` in ~130 s (inside the 1.5–3 min predicted band, ARCHITECTURE.md 4.3). Zero outage to clients. Stack destroyed. One-time AWS prerequisite surfaced: `aws iam create-service-linked-role --aws-service-name autoscaling.amazonaws.com` (recorded in `envs/tier2/README.md` and `HANDOFF.md`). |
 | 9 | Locust load test, latency vs load and instance count | Kanu | Jeel | Load test CSVs and chart | ⬜ Not started |
 | 10 | Report updates: fix G1–G7, new diagrams, measured results, actual cost + billing screenshot | Khushi | All | Week 3 add-ons ready | ⬜ Not started |
 | 11 | Tier 3: second region (Hyderabad) + Route 53 failover; needs O1 resolved | Jeel | All | Region failover measured | ⬜ Not started |

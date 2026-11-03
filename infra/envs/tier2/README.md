@@ -25,6 +25,18 @@ Prerequisites (apply in order, once per account):
 Tier 1 does not need to be destroyed first; the two stacks use separate
 VPC CIDRs and separate Terraform state keys.
 
+**One-time per account:** the ASG needs the `AWSServiceRoleForAutoScaling`
+service-linked role. On a fresh account the first `apply` fails with
+"Access denied when attempting to assume role ... Validating load balancer
+configuration failed." Create the role once (already done for the group's
+account on 2026-11-03):
+
+```
+export AWS_PROFILE=aadhaar
+aws iam create-service-linked-role --aws-service-name autoscaling.amazonaws.com
+# "InvalidInput: already exists" on later runs is fine.
+```
+
 Then:
 
 ```

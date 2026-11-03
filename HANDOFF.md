@@ -82,6 +82,27 @@ one on the IAM console if you ever paste it anywhere (chat, email,
 screenshot). Delete the CSV once the key is loaded into
 `~/.aws/credentials`.
 
+### 2.1b AWS service-linked roles (one-time per account)
+
+Some AWS services create a service-linked IAM role on first use. The
+Auto Scaling group in `envs/tier2` tripped over this on 2026-11-03: the
+first `terraform apply` created the ASG but failed on `Validating load
+balancer configuration` because `AWSServiceRoleForAutoScaling` did not
+exist yet. Fix is one idempotent CLI call:
+
+```
+export AWS_PROFILE=aadhaar
+
+aws iam create-service-linked-role \
+  --aws-service-name autoscaling.amazonaws.com
+# "InvalidInput: already exists" is fine.
+```
+
+Already created for this account (one-time). Re-run only if the account
+is re-created from scratch. The same pattern will likely come up for
+Route 53 health checks in step 11 if that service-linked role is
+missing; the error message names the role to create.
+
 ### 2.2 Tools on your laptop
 
 - Terraform ≥ 1.10 (`brew tap hashicorp/tap && brew install hashicorp/tap/terraform`, then `terraform version`).
@@ -245,7 +266,7 @@ it up.
 | `global/ecr/` (repo + replication) | Applied, stays up | Jeel | 2026-11-02 |
 | ECR image `6cc656f` | Pushed | Jeel | 2026-11-02 |
 | `envs/tier1/` | Reverted to fast hc and destroyed at the end of step 7 (2026-11-03). Reapply only if a Tier 1 review needs it. | Jeel (apply), Khushi (step 7 runs) | 2026-11-03 |
-| `envs/tier2/` | Terraform written (step 8). **Next AWS action (Jeel):** `terraform init` + `terraform apply` to bring the ASG up and verify self-healing (see `infra/envs/tier2/README.md`), then `terraform destroy` to end the session. | Jeel | 2026-11-03 |
+| `envs/tier2/` | Terraform written, applied once on 2026-11-03 to verify self-healing (replacement InService in 11 s, ALB-healthy in ~130 s), destroyed. Reapply only when working on a Tier 2 step. | Jeel | 2026-11-03 |
 | `ap-south-2` opt-in | Enabled | Khushi (console) | 2026-11-02 |
 | Budgets alert at USD 10 | **AWS action needed** (confirm it exists) | — | — |
 
