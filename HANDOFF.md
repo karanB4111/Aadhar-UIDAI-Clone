@@ -262,13 +262,22 @@ it up.
 
 | Resource | Status | Last touched by | Date (UTC) |
 |---|---|---|---|
-| `bootstrap/` (state bucket) | Applied, stays up | Jeel | 2026-11-02 |
-| `global/ecr/` (repo + replication) | Applied, stays up | Jeel | 2026-11-02 |
-| ECR image `6cc656f` | Pushed | Jeel | 2026-11-02 |
+| `bootstrap/` (state bucket) | **Destroyed 2026-11-06 (step 12).** Bucket versions + delete markers cleared first; 4 resources destroyed. | Jeel | 2026-11-06 |
+| `global/ecr/` (repo + replication) | **Destroyed 2026-11-06 (step 12).** Mumbai repo via `terraform destroy` (images and 2 untagged platform manifests deleted first). Hyderabad replica was NOT Terraform-managed (replication auto-creates it, destroying the rule does not delete the replica); cleaned up manually with `aws ecr delete-repository --region ap-south-2`. | Jeel | 2026-11-06 |
+| ECR image `6cc656f` | Deleted along with `global/ecr/`. Any re-apply needs a fresh push. | Jeel | 2026-11-06 |
 | `envs/tier1/` | Reverted to fast hc and destroyed at the end of step 7 (2026-11-03). Reapply only if a Tier 1 review needs it. | Jeel (apply), Khushi (step 7 runs) | 2026-11-03 |
 | `envs/tier2/` | Reapplied 2026-11-05 for step 9 load tests (E0/E5a/E5b); `SIGN_WORK` tuned 1000→2600→18000→**4500** during E0 calibration (env var, no new image). **Destroy at end of session.** Reapply only when working on a Tier 2 step. | Jeel (apply, step-9 SIGN_WORK + capacity changes), Kanu (load runs) | 2026-11-05 |
 | `envs/tier3/` | Applied once on AWS 2026-11-05 — 70 resources up (2 regions × VPC/ALB/ASG/alarms), both sides came up healthy on image `6cc656f`. 8 measurement runs taken (E6a × 3, E6b × 5 on prober v3, plus E6b-r01 as a prober-v2 finding). Stack destroyed at end of session. Reapply only when working on a Tier 3 step. | Jeel (code, apply, runs, destroy) | 2026-11-05 |
 | `ap-south-2` opt-in | Enabled | Khushi (console) | 2026-11-02 |
 | Budgets alert at USD 10 | **AWS action needed** (confirm it exists) | — | — |
+
+**Project is over (2026-11-06).** All 12 PLAN steps are done and all AWS
+resources are destroyed. Final billed spend: **USD 4.20** (see
+`report/WEEK3.md` §6.1 and `report/billing-nov-2026.pdf`). The step-12
+destroy left the AWS account empty of this project's resources in both
+regions. Any re-apply from this repo would need: (1) the `bootstrap/`
+stack re-applied first to recreate the state bucket, (2) the `global/ecr/`
+stack re-applied, (3) `service/` image rebuilt and pushed to both regions,
+(4) an env stack applied.
 
 Update this table whenever a stack goes up or down.

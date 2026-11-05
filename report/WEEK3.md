@@ -299,21 +299,36 @@ fraction of a month:
 - Tier 1 stacks were applied for E1, E1b and E2 (step 7) and torn down.
 - Tier 2 stacks were applied for step 8 (self-healing) and step 9 (E5a, E5b)
   and torn down after metrics were fetched (`PLAN.md` step 9 status).
-- Total AWS wall-clock time running real resources: a few hours spread
-  across Nov 2–5, 2026.
+- Tier 3 was applied once on 2026-11-05 (both regions) for the step 11
+  E6a/E6b runs and torn down the same session.
+- Total AWS wall-clock time running real resources: 58 ALB-hours (3 ALBs
+  aggregated across sessions) + 75.81 t3.micro-hours, spread across
+  Nov 2–5, 2026.
 
-Expected billed spend, by arithmetic: 30.41 USD/month ÷ 730 h/month × ~5 h
-total ≈ **USD 0.21** for a single 5-hour window, scaled to roughly **USD
-1–2** across all the step 7–9 runs combined. Within the USD 10 AWS Budgets
-tripwire with a wide margin, and well under the USD 100 free-account credit
-(D9).
+**Billed total: USD 4.20 (incl. 18% GST).** November 2026 Bills PDF:
+[`report/billing-nov-2026.pdf`](billing-nov-2026.pdf).
 
-**AWS action needed:** Jeel to open the AWS Billing console, take a
-screenshot of **Cost Explorer filtered to November 2026** showing the actual
-figure, save it as `report/figures/billing-nov-2026.png`, and replace this
-paragraph with the real number before submission. The billing data is
-delayed by up to 24 h after a stack is destroyed, so the screenshot should
-be taken at least a day after the last destroy run.
+Breakdown (pre-tax USD 3.56; the Bills PDF has the full line-item list):
+
+| Service | Pre-tax | Notes |
+|---|---|---|
+| Elastic Load Balancing (ALB) | USD 1.40 | 58 ALB-hours × USD 0.0239 + 1.206 LCU-hours × USD 0.008. ALBs dominate (~40% of spend) because each one costs USD 0.0239/h even when idle, and we had three (Tier 1, Tier 2, Tier 3 Mumbai + Tier 3 Hyderabad counted together) across sessions. |
+| EC2 (t3.micro Linux + T3 CPU credits + EBS gp3) | USD 0.94 | 75.81 instance-hours × USD 0.0112 + 0.115 vCPU-hours of T3 CPU credits (step 9 E0 at `SIGN_WORK=18000` exhausted the baseline) + 0.835 GB-month of gp3. |
+| Public IPv4 addresses (VPC) | USD 0.94 | 187.27 in-use address-hours × USD 0.005. Each instance has one for ECR egress plus one per ALB node; see ARCHITECTURE.md §6.1. |
+| KMS customer-managed keys | USD 0.28 | USD 0.14 each in eu-north-1 (Stockholm) and us-west-2 (Oregon). Not from this project (D4 limits us to ap-south-1 and ap-south-2); a leftover from the account owner's earlier work. Flag for next audit, not blocking. |
+| Everything else (ECR, S3, CloudWatch, SNS, data transfer) | USD 0.00 | Inside free-tier limits. The Mumbai→Hyderabad ECR replication transferred 0.045 GB; the free-tier allowance covered it. |
+
+Two Week 2 predictions held up well:
+
+- **ALBs and public IPs dominate.** The report flagged both in §9.2;
+  USD 1.40 + USD 0.94 = 55% of pre-tax spend, as predicted.
+- **The destroy-after-each-session discipline paid off.** The naive full-
+  month figure would have been ~USD 60 across three ALBs; actual was USD
+  1.40 for ALBs because we had them up for ~58 hours, not ~2,190.
+
+The **USD 4.20** total is **42% of the USD 10 AWS Budgets tripwire** and
+**4.2% of the USD 100 free-account credit** (D9). Well within budget with a
+2.4× margin against the tripwire.
 
 ### 6.2 What the comparison does and does not show
 
@@ -333,8 +348,8 @@ The qualitative conclusions are unchanged:
 
 | Item | Owner | Deadline |
 |---|---|---|
-| Replace the planning-cost paragraph with the actual billed figure and screenshot | Jeel | ≥ 24 h after the last `terraform destroy` |
-| Tier 3 decision (build or paper only), driven by O1 (domain) and O3 (Hyderabad pricing check) | Jeel | Before step 11 begins |
+| ~~Replace the planning-cost paragraph with the actual billed figure and screenshot~~ — **done 2026-11-06 (step 12): USD 4.20, `report/billing-nov-2026.pdf`** | Jeel | ~~≥ 24 h after the last `terraform destroy`~~ |
+| ~~Tier 3 decision (build or paper only), driven by O1 (domain) and O3 (Hyderabad pricing check)~~ — **done 2026-11-05: O1 descoped; Tier 3 built as two regional stacks + client-side failover (step 11)** | Jeel | ~~Before step 11 begins~~ |
 | Access dates on Week 2 reference list (G7 leftover) | Khushi | Before submission |
 
 ---
