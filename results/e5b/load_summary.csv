@@ -1,2 +1,2 @@
 experiment,run_id,target_rate_per_s,achieved_rate_per_s,rate_error_pct,valid_rate,requests,failures,failure_pct,client_p50_ms,client_p95_ms,client_p99_ms,server_p50_ms,server_p95_ms,server_p99_ms,instances_seen,asg_in_service_min,asg_in_service_max,notes
-e5b,e5b-r01-step,140,136.52,2.49,True,81765,0,0.0,71.0,110.0,130.0,,,,2,,,no aws_metrics.csv; server-side latency not available
+e5b,e5b-r01-step,140,136.52,2.49,True,81765,0,0.0,71.0,110.0,130.0,4.5,7.2,7.8,2,1.0,2.0,
