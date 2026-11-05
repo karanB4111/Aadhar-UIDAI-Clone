@@ -1,0 +1,23 @@
+﻿{
+    "run_id":  "e0-r03-ramp",
+    "experiment":  "e0",
+    "tool":  "locust",
+    "host":  "http://aadhaar-tier2-alb-1855590765.ap-south-1.elb.amazonaws.com",
+    "endpoint":  "/api/v1/authenticate",
+    "factor":  "otp",
+    "users":  16,
+    "rps_per_user":  10,
+    "target_rate_per_s":  160,
+    "spawn_rate":  0.5,
+    "run_time":  "10m",
+    "image_tag":  "6cc656f",
+    "client_location":  "home laptop",
+    "client_network":  "wifi",
+    "git_sha":  "a8f67a4",
+    "locust_version":  "locust 2.47.0 from C:\\Users\\KARAN YADAV\\Desktop\\Aadhar-UIDAI-Clone\\tests\\.venv\\Lib\\site-packages\\locust (Python 3.13.5)",
+    "locust_exit_code":  0,
+    "started_utc_ms":  1793869400979,
+    "ended_utc_ms":  1793870001863,
+    "written_utc":  "2026-11-05T09:13:21Z",
+    "note":  "Set ASG capacity/scaling in AWS before the run (5.3.3). Validity: achieved rate within 5% of target, no Locust CPU warnings (5.3.4)."
+}

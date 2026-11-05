@@ -1,0 +1,14 @@
+{
+  "requests_by_az": {
+    "ap-south-1a": 26470,
+    "ap-south-1b": 26471
+  },
+  "requests_by_instance": {
+    "i-0abef6a7d76dfb715": 26470,
+    "i-034175448e88b5f7a": 26471
+  },
+  "distinct_instances": 2,
+  "rps_per_user": 10.0,
+  "endpoint": "/api/v1/authenticate",
+  "factor": "otp"
+}

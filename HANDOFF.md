@@ -266,7 +266,7 @@ it up.
 | `global/ecr/` (repo + replication) | Applied, stays up | Jeel | 2026-11-02 |
 | ECR image `6cc656f` | Pushed | Jeel | 2026-11-02 |
 | `envs/tier1/` | Reverted to fast hc and destroyed at the end of step 7 (2026-11-03). Reapply only if a Tier 1 review needs it. | Jeel (apply), Khushi (step 7 runs) | 2026-11-03 |
-| `envs/tier2/` | Terraform written, applied once on 2026-11-03 to verify self-healing (replacement InService in 11 s, ALB-healthy in ~130 s), destroyed. Reapply only when working on a Tier 2 step. | Jeel | 2026-11-03 |
+| `envs/tier2/` | Reapplied 2026-11-05 for step 9 load tests (E0/E5a/E5b); `SIGN_WORK` tuned 1000→2600→18000→**4500** during E0 calibration (env var, no new image). **Destroy at end of session.** Reapply only when working on a Tier 2 step. | Jeel (apply, step-9 SIGN_WORK + capacity changes), Kanu (load runs) | 2026-11-05 |
 | `ap-south-2` opt-in | Enabled | Khushi (console) | 2026-11-02 |
 | Budgets alert at USD 10 | **AWS action needed** (confirm it exists) | — | — |
 

@@ -1,0 +1,21 @@
+{
+  "experiment": "e5a",
+  "run_id": "e5a-r01-n1",
+  "target_rate_per_s": 150,
+  "achieved_rate_per_s": 146.18,
+  "rate_error_pct": 2.55,
+  "requests": 52448,
+  "failures": 0,
+  "failure_pct": 0.0,
+  "client_p50_ms": 74.0,
+  "client_p95_ms": 110.0,
+  "client_p99_ms": 140.0,
+  "server_p50_ms": null,
+  "server_p95_ms": null,
+  "server_p99_ms": null,
+  "instances_seen": 1,
+  "asg_in_service_min": null,
+  "asg_in_service_max": null,
+  "valid_rate": true,
+  "notes": "no aws_metrics.csv; server-side latency not available"
+}

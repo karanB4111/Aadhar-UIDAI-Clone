@@ -1,0 +1,21 @@
+{
+  "experiment": "e5b",
+  "run_id": "e5b-r01-step",
+  "target_rate_per_s": 140,
+  "achieved_rate_per_s": 136.52,
+  "rate_error_pct": 2.49,
+  "requests": 81765,
+  "failures": 0,
+  "failure_pct": 0.0,
+  "client_p50_ms": 71.0,
+  "client_p95_ms": 110.0,
+  "client_p99_ms": 130.0,
+  "server_p50_ms": null,
+  "server_p95_ms": null,
+  "server_p99_ms": null,
+  "instances_seen": 2,
+  "asg_in_service_min": null,
+  "asg_in_service_max": null,
+  "valid_rate": true,
+  "notes": "no aws_metrics.csv; server-side latency not available"
+}
