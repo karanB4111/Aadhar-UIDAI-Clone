@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chaos / Failover Test — live</title>
+<style>
+  :root { color-scheme: light dark; --bg:#fafafa; --fg:#111; --muted:#555; --card:#fff;
+    --border:#ddd; --ok:#1e9e5a; --warn:#b36b00; --err:#c0272d; --az-a:#1e9e5a; --az-b:#1f6feb; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#111; --fg:#eee; --muted:#aaa; --card:#1b1b1b; --border:#333; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg); color: var(--fg); padding: 16px; }
+  h1 { margin: 0 0 4px 0; font-size: 20px; }
+  .sub { color: var(--muted); font-size: 13px; margin-bottom: 16px; }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+    padding: 12px 14px; min-width: 120px; }
+  .card .label { font-size: 11px; text-transform: uppercase; color: var(--muted); letter-spacing: .5px; }
+  .card .val { font-size: 22px; font-weight: 600; margin-top: 2px; font-variant-numeric: tabular-nums; }
+  .az { flex: 1 1 200px; }
+  .az.healthy { border-color: var(--ok); }
+  .az.healthy .val { color: var(--ok); }
+  .az.unhealthy { border-color: var(--err); background: color-mix(in srgb, var(--err) 10%, var(--card)); }
+  .az.unhealthy .val { color: var(--err); }
+  .strip-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px; margin-bottom: 12px; overflow-x: auto; }
+  .strip { display: flex; flex-direction: row-reverse; gap: 2px; height: 28px; }
+  .tile { width: 10px; height: 28px; flex: 0 0 10px; border-radius: 2px; }
+  .tile.a { background: var(--az-a); }
+  .tile.b { background: var(--az-b); }
+  .tile.e { background: var(--err); }
+  .legend { font-size: 12px; color: var(--muted); margin-top: 8px; display: flex; gap: 14px; }
+  .sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; vertical-align: middle;
+    margin-right: 4px; }
+  .controls { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; font-size: 13px; }
+  button { font: inherit; padding: 6px 12px; border: 1px solid var(--border); border-radius: 6px;
+    background: var(--card); color: var(--fg); cursor: pointer; }
+  button:hover { border-color: var(--muted); }
+  pre.log { background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 12px; margin: 0; font-size: 12px; max-height: 320px; overflow-y: auto;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+  .log .ok { color: var(--fg); }
+  .log .err { color: var(--err); }
+</style>
+</head>
+<body>
+
+<h1>Chaos / Failover Test — live</h1>
+<div class="sub">Polling <code>GET /</code> on this ALB every 500 ms. Each response is one tile; newest on the left.</div>
+
+<div class="row">
+  <div class="card az" id="az-a-card">
+    <div class="label">AZ-a (ap-south-1a)</div>
+    <div class="val" id="az-a-state">waiting</div>
+  </div>
+  <div class="card az" id="az-b-card">
+    <div class="label">AZ-b (ap-south-1b)</div>
+    <div class="val" id="az-b-state">waiting</div>
+  </div>
+</div>
+
+<div class="row">
+  <div class="card"><div class="label">Total</div><div class="val" id="c-total">0</div></div>
+  <div class="card"><div class="label">OK</div><div class="val" id="c-ok">0</div></div>
+  <div class="card"><div class="label">Errors</div><div class="val" id="c-err">0</div></div>
+  <div class="card"><div class="label">p50 (last 100)</div><div class="val" id="c-p50">— ms</div></div>
+  <div class="card"><div class="label">p99 (last 100)</div><div class="val" id="c-p99">— ms</div></div>
+</div>
+
+<div class="controls">
+  <button id="toggle">Pause</button>
+  <button id="reset">Reset</button>
+  <span class="sub" id="status">running</span>
+</div>
+
+<div class="strip-wrap">
+  <div class="strip" id="strip" aria-label="per-request AZ strip"></div>
+  <div class="legend">
+    <span><span class="sw" style="background:var(--az-a)"></span>AZ-a</span>
+    <span><span class="sw" style="background:var(--az-b)"></span>AZ-b</span>
+    <span><span class="sw" style="background:var(--err)"></span>error</span>
+  </div>
+</div>
+
+<pre class="log" id="log"></pre>
+
+<script>
+(() => {
+  const POLL_MS = 500;
+  const MAX_TILES = 240;
+  const MAX_LOG = 50;
+  const HEALTH_WINDOW_MS = 5000;
+  const LATENCY_WINDOW = 100;
+
+  const strip = document.getElementById("strip");
+  const log = document.getElementById("log");
+  const toggleBtn = document.getElementById("toggle");
+  const resetBtn = document.getElementById("reset");
+  const statusEl = document.getElementById("status");
+
+  const cTotal = document.getElementById("c-total");
+  const cOk = document.getElementById("c-ok");
+  const cErr = document.getElementById("c-err");
+  const cP50 = document.getElementById("c-p50");
+  const cP99 = document.getElementById("c-p99");
+
+  const azACard = document.getElementById("az-a-card");
+  const azBCard = document.getElementById("az-b-card");
+  const azAState = document.getElementById("az-a-state");
+  const azBState = document.getElementById("az-b-state");
+
+  let total = 0, ok = 0, err = 0;
+  let latencies = [];
+  let lastSeen = { a: 0, b: 0 };
+  let running = true;
+  let timer = null;
+
+  function percentile(arr, p) {
+    if (arr.length === 0) return null;
+    const sorted = [...arr].sort((x, y) => x - y);
+    const idx = Math.min(sorted.length - 1, Math.floor((p / 100) * sorted.length));
+    return sorted[idx];
+  }
+
+  function addTile(cls) {
+    const t = document.createElement("div");
+    t.className = "tile " + cls;
+    strip.insertBefore(t, strip.firstChild);
+    while (strip.children.length > MAX_TILES) strip.removeChild(strip.lastChild);
+  }
+
+  function addLog(entry, isErr) {
+    const line = document.createElement("div");
+    line.className = isErr ? "err" : "ok";
+    line.textContent = entry;
+    log.insertBefore(line, log.firstChild);
+    while (log.children.length > MAX_LOG) log.removeChild(log.lastChild);
+  }
+
+  function updateHealth() {
+    const now = Date.now();
+    const aH = now - lastSeen.a <= HEALTH_WINDOW_MS;
+    const bH = now - lastSeen.b <= HEALTH_WINDOW_MS;
+    azACard.classList.toggle("healthy", aH);
+    azACard.classList.toggle("unhealthy", !aH && total > 0);
+    azAState.textContent = aH ? "healthy" : (total > 0 ? "unhealthy" : "waiting");
+    azBCard.classList.toggle("healthy", bH);
+    azBCard.classList.toggle("unhealthy", !bH && total > 0);
+    azBState.textContent = bH ? "healthy" : (total > 0 ? "unhealthy" : "waiting");
+  }
+
+  function fmtTime(d) {
+    return d.toISOString().substr(11, 12);
+  }
+
+  async function poll() {
+    if (!running) return;
+    const start = performance.now();
+    const ts = new Date();
+    const url = "/?t=" + Date.now();
+    let az = null, status = null, latency = null, errMsg = null;
+    try {
+      const ctrl = new AbortController();
+      const abortTimer = setTimeout(() => ctrl.abort(), 3000);
+      const resp = await fetch(url, { cache: "no-store", signal: ctrl.signal });
+      clearTimeout(abortTimer);
+      latency = Math.round(performance.now() - start);
+      status = resp.status;
+      if (resp.ok) {
+        const body = await resp.json();
+        az = body.az || resp.headers.get("x-az");
+      } else {
+        az = resp.headers.get("x-az");
+      }
+    } catch (e) {
+      latency = Math.round(performance.now() - start);
+      errMsg = e.name === "AbortError" ? "timeout" : (e.message || "fetch_failed");
+    }
+
+    total += 1;
+    let cls, logLine, isErr = false;
+    if (errMsg || !status || status >= 500) {
+      err += 1;
+      cls = "e";
+      isErr = true;
+      logLine = `${fmtTime(ts)}  ERR    ${latency}ms  ${errMsg || ("http " + status)}`;
+    } else {
+      ok += 1;
+      if (az && az.endsWith("a")) { cls = "a"; lastSeen.a = Date.now(); }
+      else if (az && az.endsWith("b")) { cls = "b"; lastSeen.b = Date.now(); }
+      else { cls = "e"; isErr = true; err += 1; ok -= 1; }
+      logLine = `${fmtTime(ts)}  ${(az || "?").padEnd(14)} ${String(status).padEnd(4)} ${latency}ms`;
+    }
+
+    latencies.push(latency);
+    if (latencies.length > LATENCY_WINDOW) latencies.shift();
+
+    addTile(cls);
+    addLog(logLine, isErr);
+
+    cTotal.textContent = total;
+    cOk.textContent = ok;
+    cErr.textContent = err;
+    const p50 = percentile(latencies, 50);
+    const p99 = percentile(latencies, 99);
+    cP50.textContent = p50 === null ? "— ms" : p50 + " ms";
+    cP99.textContent = p99 === null ? "— ms" : p99 + " ms";
+    updateHealth();
+  }
+
+  function tick() {
+    poll().finally(() => {
+      if (running) timer = setTimeout(tick, POLL_MS);
+    });
+  }
+
+  toggleBtn.addEventListener("click", () => {
+    running = !running;
+    toggleBtn.textContent = running ? "Pause" : "Resume";
+    statusEl.textContent = running ? "running" : "paused";
+    if (running) tick();
+    else if (timer) clearTimeout(timer);
+  });
+
+  resetBtn.addEventListener("click", () => {
+    total = ok = err = 0;
+    latencies = [];
+    lastSeen = { a: 0, b: 0 };
+    strip.innerHTML = "";
+    log.innerHTML = "";
+    cTotal.textContent = cOk.textContent = cErr.textContent = 0;
+    cP50.textContent = cP99.textContent = "— ms";
+    updateHealth();
+  });
+
+  setInterval(updateHealth, 1000);
+  tick();
+})();
+</script>
+</body>
+</html>

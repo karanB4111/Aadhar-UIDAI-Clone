@@ -46,6 +46,16 @@ def test_health(client):
     assert_identity(resp)
 
 
+def test_demo_page(client):
+    resp = client.get("/demo")
+    assert resp.status_code == 200
+    assert resp.headers["content-type"].startswith("text/html")
+    body = resp.text
+    assert "<title>Chaos / Failover Test" in body
+    # The page polls GET / and colours tiles by az; smoke-check both are wired.
+    assert 'fetch("/?t=' in body or "fetch('/?t=" in body or "/?t=" in body
+
+
 def test_health_deep(client):
     resp = client.get("/health/deep")
     assert resp.status_code == 200

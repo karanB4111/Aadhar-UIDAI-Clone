@@ -15,6 +15,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY app ./app
 COPY data ./data
+COPY static ./static
 
 RUN useradd --system --uid 10001 --no-create-home app
 USER app

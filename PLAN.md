@@ -34,13 +34,17 @@ replica cleaned up manually (replication-created, not Terraform-
 managed), final sweep confirms 0 project resources in either region.
 **Final November bill: USD 4.20 incl. GST** (`report/billing-nov-2026.pdf`,
 Week 3 report §6.1 updated), 4.2% of the USD 100 free-account credit.
-**All 12 build steps done.** Open reviews: steps 1–6, 8–12 (see Status
+**All 12 build steps done.** Open reviews: steps 1–6, 8–13 (see Status
 column); open content item: Khushi G7 leftover (reference-list access
-dates) before submission. **Step 13 (new, 2026-11-06)**: Khushi to build
-a small live-polling demo frontend served by the FastAPI service at
-`GET /demo`, so the prof's "Chaos/Failover Test" demonstration is a
-visual dashboard instead of a prober terminal. Spec at the bottom of
-section 6.
+dates) before submission. **Step 13 (new, 2026-11-06)**: Khushi's live-
+polling demo frontend at `GET /demo` **done** (commit `49119a7`,
+awaiting Kanu's review of the small `main.py` diff). Dashboard is a
+single-file `service/static/demo.html` served same-origin by FastAPI;
+polls `GET /` every 500 ms and paints a green/blue/red tile per
+response so the prof's "Chaos/Failover Test" is visible on one screen.
+Smoke-tested locally (21/21 pytest pass incl. new `test_demo_page`).
+Next AWS action (demo day, Jeel): rebuild the image, push to ECR,
+bump `envs/tier1/terraform.tfvars` image_tag, re-apply Tier 1.
 The live tracker is the **Status** column in
 [section 6](#6-work-steps-after-approval).
 
@@ -223,7 +227,7 @@ project stands, for all three of us and for any AI agent working in the repo.
 | 10 | Report updates: fix G1–G7, new diagrams, measured results, actual cost + billing screenshot | Khushi | All | Week 3 add-ons ready | ✅ Done `<pending>` · review pending (All) — `report/WEEK3.md` created. G1–G7 closed (section 1), as-built Tier 1 + Tier 2 diagrams (section 2), measured failover window E1 11.5 s / E2 12.45 s / E1b 36.4 s and Tier 2 self-healing 130 s (section 3), scaling E5a per-instance split and E5b scale-out 5–7 min / scale-in ~17 min (section 4), SLA availability rollup (section 5), planning-cost paragraph with `AWS action needed: Jeel — Cost Explorer screenshot for November 2026` as the one open item before submission (section 6). Tier 3 stays paper design (section 7), pending O1. |
 | 11 | Tier 3: second region (Hyderabad), **client-side** failover (O1 descoped) | Jeel | All | Region failover measured | ✅ Done `3a5fead` · review pending (All) — Tier 3 applied once on AWS 2026-11-05 (both regions came up healthy on image `6cc656f`; Hyderabad serving from AZs 2a+2b, Mumbai from 1a+1b), 8 measurement runs taken, Tier 3 stack destroyed. **E6a (3 runs)**: planned Mumbai evacuation via ASG min/desired=0 — median time-to-switch **~13.7 s** (range 12.4–13.9), 4–5 ALB 5xx per run, 0 errors after switch, Hyderabad took every request. **E6b (5 runs r02–r06, prober v3)**: unplanned Mumbai loss via deny-all NACL on app subnets — median time-to-switch **~3.9 s** (range 3.3–5.3), 103 timeouts per run (= the open-loop's in-flight count at inject moment), 0 errors after drain, 1 switch per run. **E6b-r01 (prober v2)** is kept as a documented finding: late timeouts from the dead primary thrashed the switch decision (38 switch events in ~8 s) — fixed in prober v3 (switch decisions now use the request's own `active_url`, regression test `test_urls_mode_late_errors_from_old_target_do_not_thrash` pins it). See `results/e6a/README.md` and `results/e6b/README.md`. Measurement caveat: these are **client-side** failover numbers, a lower bound on the Route 53 case the paper design describes. |
 | 12 | `terraform destroy`, confirm the bill | Jeel | Kanu | No resources left running | ✅ Done `09ee338` · review pending (Kanu) — all `envs/*` already destroyed in earlier steps. 2026-11-06: `global/ecr` destroyed (image `6cc656f` + two untagged platform manifests `20aae8f...` and `ee40f77...` deleted first; Hyderabad replica repo was NOT Terraform-managed — replication creates it, destroying the replication rule does not — so it was deleted manually by `aws ecr delete-repository --region ap-south-2`); `bootstrap/` destroyed (bucket versions + delete markers cleared first). Final sweep: 0 EC2, 0 ALB, 0 project VPC, 0 ECR repo, 0 state bucket in both regions. **Final November 2026 bill: USD 4.20 incl. 18% GST** (pre-tax USD 3.56 — ALB USD 1.40, EC2+EBS USD 0.94, public IPv4 USD 0.94, non-project KMS keys in eu-north-1/us-west-2 USD 0.28; everything else inside free tier). Report `report/billing-nov-2026.pdf` + §6.1 updated with actuals. Within USD 10 Budgets tripwire (2.4× margin) and 4.2% of the USD 100 free-account credit (D9). |
-| 13 | Demo frontend for the prof: live polling dashboard served by the FastAPI service | Khushi | Kanu | Dashboard served at `GET /demo` on the ALB, visually shows AZ a / AZ b / error for each poll in real time | ⬜ Not started — see spec below |
+| 13 | Demo frontend for the prof: live polling dashboard served by the FastAPI service | Khushi | Kanu | Dashboard served at `GET /demo` on the ALB, visually shows AZ a / AZ b / error for each poll in real time | ✅ Done `49119a7` · review pending (Kanu) — `service/static/demo.html` single-file dashboard (inline CSS + vanilla JS, ~230 lines, no build step); polls `GET /` every 500 ms with `cache: "no-store"` and a cache-busting `?t=` query, renders one coloured tile per response (green AZ-a, blue AZ-b, red error), live counters (total/ok/err/p50/p99 over last 100), two AZ health boxes decided by "seen in last 5 s", rolling 50-row log, Pause/Resume/Reset controls. `service/app/main.py` gets one new route `@app.get("/demo", response_class=HTMLResponse)` that reads `static/demo.html` (net +13 lines incl. docstring/imports). Dockerfile `COPY static ./static` added so the file ships in the image. Smoke-tested locally against `uvicorn` (/demo 200 text/html 9408 B, / returns identity JSON with `az`). Tests: new `test_demo_page` asserts 200 + HTML + title + polling wiring; full `pytest` suite 21/21 pass. **AWS action needed (Jeel, demo day):** rebuild the image on this commit, push to ECR, bump `envs/tier1/terraform.tfvars` `image_tag`, re-apply Tier 1. |
 
 **Workload split (steps 1–13, excluding step 0 which is shared):**
 

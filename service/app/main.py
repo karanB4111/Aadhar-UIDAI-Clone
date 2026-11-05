@@ -4,6 +4,7 @@ Endpoints:
     GET  /                      service identity (FR5)
     GET  /health                shallow check for the ALB (FR3)
     GET  /health/deep           canary authentication for Route 53 (FR4)
+    GET  /demo                  live polling dashboard (PLAN step 13)
     POST /api/v1/authenticate   signed Y/N decision (FR1)
 
 Every response, including errors, carries the instance identity in
@@ -13,10 +14,11 @@ own endpoints carry the same fields (FR2).
 
 from contextlib import asynccontextmanager
 from datetime import date
+from pathlib import Path
 from typing import Literal
 
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel, Field, model_validator
 
 from . import auth
@@ -100,6 +102,16 @@ async def root():
         "synthetic_data_only": True,
         **settings.identity(),
     }
+
+
+DEMO_HTML = Path(__file__).resolve().parent.parent / "static" / "demo.html"
+
+
+@app.get("/demo", response_class=HTMLResponse)
+async def demo():
+    # Live polling dashboard, served same-origin so the browser polls GET /
+    # on the same ALB and sees round-robin + failover across AZs (PLAN step 13).
+    return HTMLResponse(DEMO_HTML.read_text(encoding="utf-8"))
 
 
 @app.get("/health")

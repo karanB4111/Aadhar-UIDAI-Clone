@@ -10,6 +10,7 @@ app/main.py                  endpoints and identity headers
 app/auth.py                  record lookup, Y/N decision, signing
 app/config.py                settings from environment variables
 data/residents.json          synthetic dataset (1,001 records), baked into the image
+static/demo.html             live polling dashboard, served at GET /demo (PLAN step 13)
 scripts/generate_dataset.py  regenerates the dataset (fixed seed)
 tests/                       pytest suite
 ```
@@ -21,6 +22,7 @@ tests/                       pytest suite
 | `GET /` | Service identity (FR5) | |
 | `GET /health` | ALB target health (FR3) | In-process only, never calls anything outside. 200 once the dataset is loaded. |
 | `GET /health/deep` | Route 53 canary, Tier 3 (FR4) | Authenticates the canary record `TEST-0000-0000-0001` and verifies the signature. 200 or 503. |
+| `GET /demo` | Live polling dashboard (PLAN step 13) | Single-page HTML served from `static/demo.html`. Polls `GET /` every 500 ms, colours tiles by `az` for the chaos/failover demo. |
 | `POST /api/v1/authenticate` | Signed Y/N decision (FR1) | Body below |
 
 Every response, errors included, carries `X-Instance-Id`, `X-AZ`, `X-Region` and
