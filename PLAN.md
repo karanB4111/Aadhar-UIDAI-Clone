@@ -20,8 +20,12 @@ The two outliers (`e2-r04-az-b`, `e1b-r02-az-b`) have the same two-cluster
 shape: a legitimate primary failover window inside the predicted band plus
 a short local-wifi blip; both are documented in each experiment's
 `results/<e>/README.md`. Tier 1 stack reverted to fast hc and destroyed.
-Next up: step 10 (report updates, Khushi) — the Week 3 measurements from steps
-7 and 9 now feed F1–F25. The live tracker is the **Status** column in
+Step 10 (Week 3 report) is **done**: `report/WEEK3.md` closes gaps G1–G7
+and folds in the measured step 7 and step 9 numbers, waiting for all-member
+review; the actual-billing screenshot (section 6.1 of the report) is the
+one open item before submission and needs Jeel to pull it from the AWS
+console. Next up: step 11 (Tier 3, Jeel), blocked on open item O1 (domain).
+The live tracker is the **Status** column in
 [section 6](#6-work-steps-after-approval).
 
 **Taking over on a new laptop / AWS setup:** see [HANDOFF.md](HANDOFF.md).
@@ -200,7 +204,7 @@ project stands, for all three of us and for any AI agent working in the repo.
 | 7 | Tier 1 failover tests, **3 runs minimum**, results committed | Khushi | Jeel | CSVs and charts in `results/` | ✅ Done `0cbeb19` · reviewed (Jeel) — E1 5/5 pass (median 11.5 s), E2 5/5 (median 12.45 s; `e2-r04-az-b` is an annotated two-cluster outlier), E1b 3/3 (median 36.4 s; `e1b-r02-az-b` same shape). Tier 1 stack reverted to fast hc and destroyed. |
 | 8 | Tier 2: ASG + scaling policy | Jeel | Khushi | Killed instance is replaced automatically | ✅ Done `135bfe5` · review pending (Khushi) — `modules/app_asg/` and `envs/tier2/` added; ASG min 1/desired 2/max 2 across AZs a,b, target-tracking on `ALBRequestCountPerTarget`, ELB health checks. Applied on AWS 2026-11-03: ASG came up healthy in both AZs. Terminated `i-018673c…` via `terminate-instance-in-auto-scaling-group`; replacement `InService` in 11 s (launch-before-terminate held capacity), ALB target `healthy` in ~130 s (inside the 1.5–3 min predicted band, ARCHITECTURE.md 4.3). Zero outage to clients. Stack destroyed. One-time AWS prerequisite surfaced: `aws iam create-service-linked-role --aws-service-name autoscaling.amazonaws.com` (recorded in `envs/tier2/README.md` and `HANDOFF.md`). |
 | 9 | Locust load test, latency vs load and instance count | Kanu | Jeel | Load test CSVs and chart | ✅ Done `71294a1`, `e93638b` · review pending (Jeel) — tooling + all runs done. **E0**: R_max ≈ 160 rps **laptop-bounded** (one t3.micro doesn't saturate from a laptop/Wi-Fi at a stable `SIGN_WORK`; 4500→flat 100 ms @158 rps, 18000→collapse @2 rps), so **`SIGN_WORK=4500` locked** and scaling shown via per-instance CPU/`RequestCountPerTarget` not latency (group call 2026-11-05). **E5a**: N=1 vs N=2 at ~147 rps — load split cleanly 26,470/26,471 (~74 rps/instance), p99 140→120 ms, 0 fail; `charts/latency_vs_instances.png`. **E5b**: step ~137 rps → **scale-out 1→2 in ~5–7 min**, 0 client errors; **scale-in 2→1 in ~17 min** after load removed (both inside the 4.3 bands); `charts/autoscale_timeline.png`. Raw CSVs + per-run `load_summary.json` + server-side `aws_metrics.csv` + READMEs in `results/e0,e5a,e5b/`. Tier 2 stack destroyed after metrics fetch. |
-| 10 | Report updates: fix G1–G7, new diagrams, measured results, actual cost + billing screenshot | Khushi | All | Week 3 add-ons ready | ⬜ Not started |
+| 10 | Report updates: fix G1–G7, new diagrams, measured results, actual cost + billing screenshot | Khushi | All | Week 3 add-ons ready | ✅ Done `<pending>` · review pending (All) — `report/WEEK3.md` created. G1–G7 closed (section 1), as-built Tier 1 + Tier 2 diagrams (section 2), measured failover window E1 11.5 s / E2 12.45 s / E1b 36.4 s and Tier 2 self-healing 130 s (section 3), scaling E5a per-instance split and E5b scale-out 5–7 min / scale-in ~17 min (section 4), SLA availability rollup (section 5), planning-cost paragraph with `AWS action needed: Jeel — Cost Explorer screenshot for November 2026` as the one open item before submission (section 6). Tier 3 stays paper design (section 7), pending O1. |
 | 11 | Tier 3: second region (Hyderabad) + Route 53 failover; needs O1 resolved | Jeel | All | Region failover measured | ⬜ Not started |
 | 12 | `terraform destroy`, confirm the bill | Jeel | Kanu | No resources left running | ⬜ Not started |
 
