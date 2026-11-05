@@ -38,15 +38,18 @@ from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urlsplit
 
-PROBER_VERSION = "1"
+PROBER_VERSION = "3"
 REPO_ROOT = Path(__file__).resolve().parent.parent
 RUN_ID_RE = re.compile(r"^(?P<experiment>[a-z0-9]+)-r\d{2}-[a-z0-9][a-z0-9-]*$")
 
 # Columns from ARCHITECTURE.md 8.3, plus `seq` (schedule slot, to check the
-# open loop kept up) and `error_detail` (what exactly failed).
+# open loop kept up), `error_detail` (what exactly failed), and
+# `active_url` (the base URL this request went to; constant in single-URL
+# mode, flips in --urls client-side failover mode used by E6a/E6b).
 PROBER_COLUMNS = [
     "seq", "t_send_utc_ms", "t_recv_utc_ms", "latency_ms", "status", "error_class",
-    "error_detail", "instance_id", "az", "region", "resolved_ip", "run_id",
+    "error_detail", "instance_id", "az", "region", "resolved_ip", "active_url",
+    "run_id",
 ]
 EVENT_COLUMNS = ["t_utc_ms", "event", "detail", "run_id"]
 MAX_RESPONSE_BYTES = 64 * 1024
@@ -119,13 +122,14 @@ class Result:
     error_detail: str = ""
     headers: dict = field(default_factory=dict)
     resolved_ip: str = ""
+    active_url: str = ""
 
     def row(self, run_id: str) -> list:
         return [
             self.seq, self.t_send_utc_ms, self.t_recv_utc_ms, f"{self.latency_ms:.1f}",
             "" if self.status is None else self.status, self.error_class, self.error_detail,
             self.headers.get("x-instance-id", ""), self.headers.get("x-az", ""),
-            self.headers.get("x-region", ""), self.resolved_ip, run_id,
+            self.headers.get("x-region", ""), self.resolved_ip, self.active_url, run_id,
         ]
 
 
@@ -175,11 +179,12 @@ def _read_response(sock: socket.socket, deadline: float) -> tuple[int, dict]:
     return status, headers
 
 
-def probe_once(target: Target, seq: int, connect_timeout: float, total_timeout: float) -> Result:
+def probe_once(target: Target, seq: int, connect_timeout: float, total_timeout: float,
+               active_url: str = "") -> Result:
     """One request on a fresh connection. Never raises; errors go in the Result."""
     start = time.perf_counter()
     deadline = start + total_timeout
-    res = Result(seq=seq, t_send_utc_ms=utc_ms())
+    res = Result(seq=seq, t_send_utc_ms=utc_ms(), active_url=active_url)
     sock = None
     phase = "dns"
     try:
@@ -242,10 +247,16 @@ def _percentile(values: list[float], p: float) -> float | None:
 
 
 class Prober:
-    def __init__(self, target: Target, run_id: str, run_dir: Path, rate: float, duration: float | None,
+    def __init__(self, targets: list[tuple[Target, str]], run_id: str, run_dir: Path,
+                 rate: float, duration: float | None,
                  connect_timeout: float, total_timeout: float, actions: list[tuple[float, str, str]],
-                 quiet: bool = False):
-        self.target = target
+                 switch_after: int = 3, quiet: bool = False):
+        # targets: [(Target, original_url), ...]. In single-URL mode (E1, E2,
+        # ...) there is one entry. In --urls mode (E6a/E6b) there are two:
+        # [primary, secondary]. The active target starts at index 0 and flips
+        # to 1 - index after `switch_after` consecutive errors; active_url is
+        # recorded on every CSV row so the switch is visible.
+        self.targets = targets
         self.run_id = run_id
         self.run_dir = run_dir
         self.rate = rate
@@ -253,11 +264,24 @@ class Prober:
         self.connect_timeout = connect_timeout
         self.total_timeout = total_timeout
         self.actions = sorted(actions)
+        self.switch_after = switch_after
         self.quiet = quiet
         self.results: "queue.Queue[Result | None]" = queue.Queue()
         self.lags_ms: list[float] = []
         self.counts = {"sent": 0, "ok": 0, "timeout": 0, "conn_error": 0, "http_5xx": 0, "http_other": 0}
         self.action_threads: list[threading.Thread] = []
+        # Shared switch state, read by the submit path and written by the
+        # writer thread as results come in. A lock keeps the compound
+        # read-modify-write atomic.
+        self._active_idx = 0
+        self._consecutive_errors = 0
+        self._switches: list[dict] = []
+        self._lock = threading.Lock()
+
+    @property
+    def target(self) -> Target:
+        """Back-compat shim for one-URL callers/tests."""
+        return self.targets[0][0]
 
     def _writer(self) -> None:
         with (self.run_dir / "prober.csv").open("w", newline="", encoding="utf-8") as f:
@@ -270,9 +294,55 @@ class Prober:
                     break
                 w.writerow(res.row(self.run_id))
                 self.counts[res.error_class or "ok"] += 1
+                self._update_switch_state(res)
                 if time.perf_counter() - last_flush > 1:
                     f.flush()
                     last_flush = time.perf_counter()
+
+    def _update_switch_state(self, res: Result) -> None:
+        """In --urls mode, flip the active target after N consecutive errors.
+
+        Switch decisions use the URL the request actually went to
+        (res.active_url), NOT whatever is currently active when the result
+        arrives. With the open loop plus a 5 s total timeout, a burst of
+        in-flight requests to a failing target returns as timeouts AFTER
+        the first switch; counting those against the new active target
+        would thrash (see E6b-r01 for an actual example of this bug).
+        Results from a non-active target now only feed into their own
+        counter, which is reset on every successful result and discarded
+        when the active target flips again.
+
+        Serialised on the writer thread; the submit path reads active_idx
+        under the same lock.
+        """
+        if len(self.targets) < 2:
+            return
+        with self._lock:
+            # Only results from the currently-active URL can trigger a
+            # switch. Late results from the previous target are logged in
+            # the CSV but ignored here.
+            active_url = self.targets[self._active_idx][1]
+            if res.active_url != active_url:
+                return
+            if res.error_class:
+                self._consecutive_errors += 1
+            else:
+                self._consecutive_errors = 0
+            if self._consecutive_errors >= self.switch_after:
+                prev = self._active_idx
+                self._active_idx = 1 - prev
+                self._consecutive_errors = 0
+                prev_url = self.targets[prev][1]
+                new_url = self.targets[self._active_idx][1]
+                t = utc_ms()
+                detail = f"{prev_url} -> {new_url} after {self.switch_after} consecutive errors"
+                self._switches.append({"t_utc_ms": t, "from_url": prev_url, "to_url": new_url, "at_seq": res.seq})
+                append_event(self.run_dir, self.run_id, "switch_target", detail, t)
+                self._log(f"[{t}] switch_target: {detail}")
+
+    def _active_target(self) -> tuple[Target, str]:
+        with self._lock:
+            return self.targets[self._active_idx]
 
     def _run_action(self, event: str, command: str) -> None:
         # The timestamp is taken when the command returns (ARCHITECTURE.md 8.3).
@@ -307,14 +377,20 @@ class Prober:
         interval = 1.0 / self.rate
         pending_actions = list(self.actions)
         started_utc = utc_ms()
-        append_event(self.run_dir, self.run_id, "probe_start", f"{self.rate}/s to {self.target.host}", started_utc)
+        if len(self.targets) == 1:
+            start_detail = f"{self.rate}/s to {self.targets[0][0].host}"
+        else:
+            hosts = ", ".join(f"{i}:{t.host}" for i, (t, _) in enumerate(self.targets))
+            start_detail = f"{self.rate}/s to [{hosts}], switch_after={self.switch_after}"
+        append_event(self.run_dir, self.run_id, "probe_start", start_detail, started_utc)
         t0 = time.perf_counter()
         next_progress = 5.0
         seq = 0
 
         def submit(n: int, scheduled: float) -> None:
             lag = (time.perf_counter() - scheduled) * 1000
-            res = probe_once(self.target, n, self.connect_timeout, self.total_timeout)
+            target, active_url = self._active_target()
+            res = probe_once(target, n, self.connect_timeout, self.total_timeout, active_url)
             self.lags_ms.append(lag)
             self.results.put(res)
 
@@ -364,6 +440,7 @@ class Prober:
                 "max": max(self.lags_ms, default=None),
             },
             "actions_not_run": [list(a) for a in pending_actions],
+            "switches": list(self._switches),
         }
 
 
@@ -383,7 +460,17 @@ def main(argv: list[str] | None = None) -> int:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="Example:\n  python tests/prober.py http://localhost:8080/ --run-id local-r01-app-a --duration 60",
     )
-    p.add_argument("url", help="target, e.g. http://localhost:8080/ or http://<alb-dns>/")
+    p.add_argument("url", nargs="?",
+                   help="target, e.g. http://localhost:8080/ or http://<alb-dns>/. "
+                        "Mutually exclusive with --urls.")
+    p.add_argument("--urls",
+                   help="comma-separated primary,secondary base URLs for client-side "
+                        "failover (step 11, E6a/E6b). After --switch-after consecutive "
+                        "errors on the active URL, the prober switches to the other and "
+                        "logs a switch_target event. Mutually exclusive with the positional URL.")
+    p.add_argument("--switch-after", type=int, default=3,
+                   help="consecutive errors before switching the active URL (default 3). "
+                        "Ignored unless --urls is given.")
     p.add_argument("--run-id", required=True, help="<experiment>-r<NN>-<target>, e.g. e1-r01-az-a")
     p.add_argument("--rate", type=float, default=20.0, help="requests per second (default 20)")
     p.add_argument("--duration", type=float, help="seconds to run; default: until Ctrl+C")
@@ -401,8 +488,17 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--quiet", action="store_true", help="no progress output")
     args = p.parse_args(argv)
 
+    if bool(args.url) == bool(args.urls):
+        p.error("pass exactly one of: positional URL, or --urls primary,secondary")
+
     try:
-        target = Target.parse(args.url)
+        if args.urls:
+            raw = [u.strip() for u in args.urls.split(",") if u.strip()]
+            if len(raw) != 2:
+                raise ValueError(f"--urls needs exactly 2 comma-separated URLs, got {len(raw)}")
+            targets = [(Target.parse(u), u) for u in raw]
+        else:
+            targets = [(Target.parse(args.url), args.url)]
         run_dir = run_dir_for(args.results_dir, args.run_id)
         actions = [(float(at), event, cmd) for at, event, cmd in args.action]
         extra = _parse_meta(args.meta)
@@ -410,13 +506,17 @@ def main(argv: list[str] | None = None) -> int:
         p.error(str(exc))
     if args.rate <= 0 or args.connect_timeout <= 0 or args.total_timeout <= 0:
         p.error("rate and timeouts must be positive")
+    if args.switch_after < 1:
+        p.error("--switch-after must be >= 1")
     # Raw results are never overwritten (CONTRIBUTING.md); pick a new run number.
     if (run_dir / "prober.csv").exists():
         p.error(f"{run_dir / 'prober.csv'} already exists; use a new run id")
 
     meta = {
         "run_id": args.run_id,
-        "url": args.url,
+        "url": args.url if args.url else None,
+        "urls": [u for _, u in targets] if args.urls else None,
+        "switch_after": args.switch_after if args.urls else None,
         "rate_per_s": args.rate,
         "duration_s": args.duration,
         "connect_timeout_s": args.connect_timeout,
@@ -434,10 +534,12 @@ def main(argv: list[str] | None = None) -> int:
         },
         "extra": extra,
     }
-    prober = Prober(target, args.run_id, run_dir, args.rate, args.duration,
-                    args.connect_timeout, args.total_timeout, actions, args.quiet)
+    prober = Prober(targets, args.run_id, run_dir, args.rate, args.duration,
+                    args.connect_timeout, args.total_timeout, actions,
+                    args.switch_after, args.quiet)
     if not args.quiet:
-        print(f"probing {args.url} at {args.rate}/s -> {run_dir}  (Ctrl+C to stop; "
+        where = args.url if args.url else f"[primary={targets[0][1]}, secondary={targets[1][1]}]"
+        print(f"probing {where} at {args.rate}/s -> {run_dir}  (Ctrl+C to stop; "
               "is the clock NTP-synced?)", file=sys.stderr)
     meta["summary"] = prober.run()
     meta["written_utc"] = datetime.now(timezone.utc).isoformat(timespec="seconds")

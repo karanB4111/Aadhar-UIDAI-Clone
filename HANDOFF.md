@@ -130,7 +130,7 @@ Always `git pull` before you start work (PLAN section 6).
 | `infra/global/ecr/` | `aadhaar-mock` ECR repo + replication to `ap-south-2` | Long-lived; destroyed only in step 12 | Jeel (step 6) |
 | `infra/envs/tier1/` | Tier 1 VPC + ALB + 2 EC2 | **Apply when working on a Tier 1 step; destroy at end of session** | step 6 Jeel; step 7 Khushi |
 | `infra/envs/tier2/` | Tier 2 ASG stack | Written (step 8), not yet applied. **Apply when working on a Tier 2 step; destroy at end of session** | step 8 Jeel; step 9 Kanu |
-| `infra/envs/tier3/` | Two regions + Route 53 | Not written yet (step 11, Jeel) | Jeel (step 11) |
+| `infra/envs/tier3/` | Two regional stacks (Mumbai + Hyderabad), **no Route 53** (O1 descoped) | **Apply when working on step 11; destroy at end of session.** Two ALBs + up to 4 EC2s running costs ~USD 0.05/h. | Jeel (step 11) |
 
 **Hard rule (CONTRIBUTING.md):** `terraform destroy` on `envs/*` at
 the end of every session. The `bootstrap/` and `global/ecr/` stacks
@@ -267,6 +267,7 @@ it up.
 | ECR image `6cc656f` | Pushed | Jeel | 2026-11-02 |
 | `envs/tier1/` | Reverted to fast hc and destroyed at the end of step 7 (2026-11-03). Reapply only if a Tier 1 review needs it. | Jeel (apply), Khushi (step 7 runs) | 2026-11-03 |
 | `envs/tier2/` | Reapplied 2026-11-05 for step 9 load tests (E0/E5a/E5b); `SIGN_WORK` tuned 1000→2600→18000→**4500** during E0 calibration (env var, no new image). **Destroy at end of session.** Reapply only when working on a Tier 2 step. | Jeel (apply, step-9 SIGN_WORK + capacity changes), Kanu (load runs) | 2026-11-05 |
+| `envs/tier3/` | Applied once on AWS 2026-11-05 — 70 resources up (2 regions × VPC/ALB/ASG/alarms), both sides came up healthy on image `6cc656f`. 8 measurement runs taken (E6a × 3, E6b × 5 on prober v3, plus E6b-r01 as a prober-v2 finding). Stack destroyed at end of session. Reapply only when working on a Tier 3 step. | Jeel (code, apply, runs, destroy) | 2026-11-05 |
 | `ap-south-2` opt-in | Enabled | Khushi (console) | 2026-11-02 |
 | Budgets alert at USD 10 | **AWS action needed** (confirm it exists) | — | — |
 

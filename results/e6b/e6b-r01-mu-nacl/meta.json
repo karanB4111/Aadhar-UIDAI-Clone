@@ -1,0 +1,258 @@
+{
+  "run_id": "e6b-r01-mu-nacl",
+  "url": null,
+  "urls": [
+    "http://aadhaar-tier3-mu-alb-734977341.ap-south-1.elb.amazonaws.com",
+    "http://aadhaar-tier3-hy-alb-1132399541.ap-south-2.elb.amazonaws.com"
+  ],
+  "switch_after": 3,
+  "rate_per_s": 20.0,
+  "duration_s": 360.0,
+  "connect_timeout_s": 2.0,
+  "total_timeout_s": 5.0,
+  "new_connection_per_request": true,
+  "actions": [
+    {
+      "at_s": 60.0,
+      "event": "inject_start",
+      "command": "bash tests/e6b_inject.sh"
+    },
+    {
+      "at_s": 300.0,
+      "event": "restore",
+      "command": "bash tests/e6b_restore.sh"
+    }
+  ],
+  "git_sha": "02d4ca5",
+  "image_tag": "02d4ca5",
+  "client_location": "home",
+  "client_network": "wifi",
+  "tool_versions": {
+    "prober": "2",
+    "python": "3.13.5",
+    "os": "macOS-26.6.2-arm64-arm-64bit-Mach-O"
+  },
+  "extra": {
+    "hc_interval": "5",
+    "tier": "3"
+  },
+  "summary": {
+    "started_utc_ms": 1793898305818,
+    "ended_utc_ms": 1793898665774,
+    "requests": 7200,
+    "counts": {
+      "ok": 6901,
+      "timeout": 299,
+      "conn_error": 0,
+      "http_5xx": 0,
+      "http_other": 0
+    },
+    "send_lag_ms": {
+      "p50": 3.6553749814629555,
+      "p99": 10.138874989934266,
+      "max": 14.346541953273118
+    },
+    "actions_not_run": [],
+    "switches": [
+      {
+        "t_utc_ms": 1793898375875,
+        "from_url": "http://aadhaar-tier3-mu-alb-734977341.ap-south-1.elb.amazonaws.com",
+        "to_url": "http://aadhaar-tier3-hy-alb-1132399541.ap-south-2.elb.amazonaws.com",
+        "at_seq": 1301
+      },
+      {
+        "t_utc_ms": 1793898376025,
+        "from_url": "http://aadhaar-tier3-hy-alb-1132399541.ap-south-2.elb.amazonaws.com",
+        "to_url": "http://aadhaar-tier3-mu-alb-734977341.ap-south-1.elb.amazonaws.com",
+        "at_seq": 1304
+      },
+      {
+        "t_utc_ms": 1793898376325,
+        "from_url": "http://aadhaar-tier3-mu-alb-734977341.ap-south-1.elb.amazonaws.com",
+        "to_url": "http://aadhaar-tier3-hy-alb-1132399541.ap-south-2.elb.amazonaws.com",
+        "at_seq": 1310
+      },
+      {
+        "t_utc_ms": 1793898376472,
+        "from_url": "http://aadhaar-tier3-hy-alb-1132399541.ap-south-2.elb.amazonaws.com",
+        "to_url": "http://aadhaar-tier3-mu-alb-734977341.ap-south-1.elb.amazonaws.com",
+        "at_seq": 1313
+      },
+      {
+        "t_utc_ms": 1793898376721,
+        "from_url": "http://aadhaar-tier3-mu-alb-734977341.ap-south-1.elb.amazonaws.com",
+        "to_url": "http://aadhaar-tier3-hy-alb-1132399541.ap-south-2.elb.amazonaws.com",
+        "at_seq": 1318
+      },
+      {
+        "t_utc_ms": 1793898377575,
+        "from_url": "http://aadhaar-tier3-hy-alb-1132399541.ap-south-2.elb.amazonaws.com",
+        "to_url": "http://aadhaar-tier3-mu-alb-734977341.ap-south-1.elb.amazonaws.com",
+        "at_seq": 1335
+      },
+      {
+        "t_utc_ms": 1793898377825,
+        "from_url": "http://aadhaar-tier3-mu-alb-734977341.ap-south-1.elb.amazonaws.com",
+        "to_url": "http://aadhaar-tier3-hy-alb-1132399541.ap-south-2.elb.amazonaws.com",
+        "at_seq": 1340
+      },
+      {
+        "t_utc_ms": 1793898377975,
+        "from_url": "http://aadhaar-tier3-hy-alb-1132399541.ap-south-2.elb.amazonaws.com",
+        "to_url": "http://aadhaar-tier3-mu-alb-734977341.ap-south-1.elb.amazonaws.com",
+        "at_seq": 1343
+      },
+      {
+        "t_utc_ms": 1793898378225,
+        "from_url": "http://aadhaar-tier3-mu-alb-734977341.ap-south-1.elb.amazonaws.com",
+        "to_url": "http://aadhaar-tier3-hy-alb-1132399541.ap-south-2.elb.amazonaws.com",
+        "at_seq": 1348
+      },
+      {
+        "t_utc_ms": 1793898378374,
+        "from_url": "http://aadhaar-tier3-hy-alb-1132399541.ap-south-2.elb.amazonaws.com",
+        "to_url": "http://aadhaar-tier3-mu-alb-734977341.ap-south-1.elb.amazonaws.com",
+        "at_seq": 1351
+      },
+      {
+        "t_utc_ms": 1793898378623,
+        "from_url": "http://aadhaar-tier3-mu-alb-734977341.ap-south-1.elb.amazonaws.com",
+        "to_url": "http://aadhaar-tier3-hy-alb-1132399541.ap-south-2.elb.amazonaws.com",
+        "at_seq": 1356
+      },
+      {
+        "t_utc_ms": 1793898379122,
+        "from_url": "http://aadhaar-tier3-hy-alb-1132399541.ap-south-2.elb.amazonaws.com",
+        "to_url": "http://aadhaar-tier3-mu-alb-734977341.ap-south-1.elb.amazonaws.com",
+        "at_seq": 1366
+      },
+      {
+        "t_utc_ms": 1793898379323,
+        "from_url": "http://aadhaar-tier3-mu-alb-734977341.ap-south-1.elb.amazonaws.com",
+        "to_url": "http://aadhaar-tier3-hy-alb-1132399541.ap-south-2.elb.amazonaws.com",
+        "at_seq": 1370
+      },
+      {
+        "t_utc_ms": 1793898379671,
+        "from_url": "http://aadhaar-tier3-hy-alb-1132399541.ap-south-2.elb.amazonaws.com",
+        "to_url": "http://aadhaar-tier3-mu-alb-734977341.ap-south-1.elb.amazonaws.com",
+        "at_seq": 1377
+      },
+      {
+        "t_utc_ms": 1793898379925,
+        "from_url": "http://aadhaar-tier3-mu-alb-734977341.ap-south-1.elb.amazonaws.com",
+        "to_url": "http://aadhaar-tier3-hy-alb-1132399541.ap-south-2.elb.amazonaws.com",
+        "at_seq": 1382
+      },
+      {
+        "t_utc_ms": 1793898380174,
+        "from_url": "http://aadhaar-tier3-hy-alb-1132399541.ap-south-2.elb.amazonaws.com",
+        "to_url": "http://aadhaar-tier3-mu-alb-734977341.ap-south-1.elb.amazonaws.com",
+        "at_seq": 1387
+      },
+      {
+        "t_utc_ms": 1793898380474,
+        "from_url": "http://aadhaar-tier3-mu-alb-734977341.ap-south-1.elb.amazonaws.com",
+        "to_url": "http://aadhaar-tier3-hy-alb-1132399541.ap-south-2.elb.amazonaws.com",
+        "at_seq": 1393
+      },
+      {
+        "t_utc_ms": 1793898380725,
+        "from_url": "http://aadhaar-tier3-hy-alb-1132399541.ap-south-2.elb.amazonaws.com",
+        "to_url": "http://aadhaar-tier3-mu-alb-734977341.ap-south-1.elb.amazonaws.com",
+        "at_seq": 1398
+      },
+      {
+        "t_utc_ms": 1793898381174,
+        "from_url": "http://aadhaar-tier3-mu-alb-734977341.ap-south-1.elb.amazonaws.com",
+        "to_url": "http://aadhaar-tier3-hy-alb-1132399541.ap-south-2.elb.amazonaws.com",
+        "at_seq": 1407
+      },
+      {
+        "t_utc_ms": 1793898381324,
+        "from_url": "http://aadhaar-tier3-hy-alb-1132399541.ap-south-2.elb.amazonaws.com",
+        "to_url": "http://aadhaar-tier3-mu-alb-734977341.ap-south-1.elb.amazonaws.com",
+        "at_seq": 1410
+      },
+      {
+        "t_utc_ms": 1793898381574,
+        "from_url": "http://aadhaar-tier3-mu-alb-734977341.ap-south-1.elb.amazonaws.com",
+        "to_url": "http://aadhaar-tier3-hy-alb-1132399541.ap-south-2.elb.amazonaws.com",
+        "at_seq": 1415
+      },
+      {
+        "t_utc_ms": 1793898386474,
+        "from_url": "http://aadhaar-tier3-hy-alb-1132399541.ap-south-2.elb.amazonaws.com",
+        "to_url": "http://aadhaar-tier3-mu-alb-734977341.ap-south-1.elb.amazonaws.com",
+        "at_seq": 1513
+      },
+      {
+        "t_utc_ms": 1793898391625,
+        "from_url": "http://aadhaar-tier3-mu-alb-734977341.ap-south-1.elb.amazonaws.com",
+        "to_url": "http://aadhaar-tier3-hy-alb-1132399541.ap-south-2.elb.amazonaws.com",
+        "at_seq": 1616
+      },
+      {
+        "t_utc_ms": 1793898391775,
+        "from_url": "http://aadhaar-tier3-hy-alb-1132399541.ap-south-2.elb.amazonaws.com",
+        "to_url": "http://aadhaar-tier3-mu-alb-734977341.ap-south-1.elb.amazonaws.com",
+        "at_seq": 1619
+      },
+      {
+        "t_utc_ms": 1793898392024,
+        "from_url": "http://aadhaar-tier3-mu-alb-734977341.ap-south-1.elb.amazonaws.com",
+        "to_url": "http://aadhaar-tier3-hy-alb-1132399541.ap-south-2.elb.amazonaws.com",
+        "at_seq": 1624
+      },
+      {
+        "t_utc_ms": 1793898392774,
+        "from_url": "http://aadhaar-tier3-hy-alb-1132399541.ap-south-2.elb.amazonaws.com",
+        "to_url": "http://aadhaar-tier3-mu-alb-734977341.ap-south-1.elb.amazonaws.com",
+        "at_seq": 1639
+      },
+      {
+        "t_utc_ms": 1793898393021,
+        "from_url": "http://aadhaar-tier3-mu-alb-734977341.ap-south-1.elb.amazonaws.com",
+        "to_url": "http://aadhaar-tier3-hy-alb-1132399541.ap-south-2.elb.amazonaws.com",
+        "at_seq": 1644
+      },
+      {
+        "t_utc_ms": 1793898393274,
+        "from_url": "http://aadhaar-tier3-hy-alb-1132399541.ap-south-2.elb.amazonaws.com",
+        "to_url": "http://aadhaar-tier3-mu-alb-734977341.ap-south-1.elb.amazonaws.com",
+        "at_seq": 1649
+      },
+      {
+        "t_utc_ms": 1793898393570,
+        "from_url": "http://aadhaar-tier3-mu-alb-734977341.ap-south-1.elb.amazonaws.com",
+        "to_url": "http://aadhaar-tier3-hy-alb-1132399541.ap-south-2.elb.amazonaws.com",
+        "at_seq": 1655
+      },
+      {
+        "t_utc_ms": 1793898396975,
+        "from_url": "http://aadhaar-tier3-hy-alb-1132399541.ap-south-2.elb.amazonaws.com",
+        "to_url": "http://aadhaar-tier3-mu-alb-734977341.ap-south-1.elb.amazonaws.com",
+        "at_seq": 1723
+      },
+      {
+        "t_utc_ms": 1793898397925,
+        "from_url": "http://aadhaar-tier3-mu-alb-734977341.ap-south-1.elb.amazonaws.com",
+        "to_url": "http://aadhaar-tier3-hy-alb-1132399541.ap-south-2.elb.amazonaws.com",
+        "at_seq": 1742
+      },
+      {
+        "t_utc_ms": 1793898402171,
+        "from_url": "http://aadhaar-tier3-hy-alb-1132399541.ap-south-2.elb.amazonaws.com",
+        "to_url": "http://aadhaar-tier3-mu-alb-734977341.ap-south-1.elb.amazonaws.com",
+        "at_seq": 1827
+      },
+      {
+        "t_utc_ms": 1793898402420,
+        "from_url": "http://aadhaar-tier3-mu-alb-734977341.ap-south-1.elb.amazonaws.com",
+        "to_url": "http://aadhaar-tier3-hy-alb-1132399541.ap-south-2.elb.amazonaws.com",
+        "at_seq": 1832
+      }
+    ]
+  },
+  "written_utc": "2026-11-05T17:11:05+00:00"
+}

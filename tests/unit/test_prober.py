@@ -165,3 +165,104 @@ def test_event_cli_appends(tmp_path):
     assert [r["event"] for r in rows] == ["inject_start", "restore"]
     assert rows[0]["detail"] == "stopped app-a"
     assert int(rows[1]["t_utc_ms"]) >= int(rows[0]["t_utc_ms"])
+
+
+# ---- --urls client-side failover mode (step 11, E6a/E6b) --------------------
+
+
+def test_cli_rejects_both_url_and_urls(server, tmp_path):
+    with pytest.raises(SystemExit):
+        prober.main([server + "/", "--urls", f"{server}/,{server}/",
+                     "--run-id", "t5-r01-both", "--duration", "0.1",
+                     "--results-dir", str(tmp_path), "--quiet"])
+
+
+def test_cli_rejects_neither_url_nor_urls(tmp_path):
+    with pytest.raises(SystemExit):
+        prober.main(["--run-id", "t5-r02-neither", "--duration", "0.1",
+                     "--results-dir", str(tmp_path), "--quiet"])
+
+
+def test_urls_mode_single_target_counts_errors(server, tmp_path):
+    """Both URLs point to the same healthy server: no switches, all ok."""
+    rc = prober.main(["--urls", f"{server}/,{server}/", "--run-id", "t5-r03-same",
+                      "--rate", "20", "--duration", "0.5", "--results-dir", str(tmp_path),
+                      "--quiet"])
+    assert rc == 0
+    rows = read_csv(tmp_path / "t5" / "t5-r03-same" / "prober.csv")
+    assert "active_url" in rows[0]
+    assert {r["active_url"] for r in rows} == {f"{server}/"}
+    events = read_csv(tmp_path / "t5" / "t5-r03-same" / "events.csv")
+    assert "switch_target" not in {e["event"] for e in events}
+
+
+def test_urls_mode_switches_after_n_consecutive_errors(server, tmp_path):
+    """Primary is a closed port (conn_error); secondary is the healthy server.
+
+    The prober should switch to the secondary after --switch-after consecutive
+    errors and stay there until the primary comes back.
+    """
+    dead = f"http://127.0.0.1:{free_port()}/"
+    rc = prober.main(["--urls", f"{dead},{server}/", "--run-id", "t5-r04-switch",
+                      "--rate", "20", "--duration", "1.5",
+                      "--switch-after", "2",
+                      "--connect-timeout", "0.3", "--total-timeout", "0.5",
+                      "--results-dir", str(tmp_path), "--quiet"])
+    assert rc == 0
+    run_dir = tmp_path / "t5" / "t5-r04-switch"
+    rows = read_csv(run_dir / "prober.csv")
+    # Early rows hit the dead primary; later rows hit the healthy secondary.
+    first_ok = next((r for r in rows if r["status"] == "200"), None)
+    assert first_ok is not None, "secondary never served"
+    assert first_ok["active_url"] == f"{server}/"
+    events = read_csv(run_dir / "events.csv")
+    switches = [e for e in events if e["event"] == "switch_target"]
+    assert len(switches) >= 1
+    assert dead in switches[0]["detail"] and server in switches[0]["detail"]
+    meta = json.loads((run_dir / "meta.json").read_text())
+    assert meta["switch_after"] == 2
+    assert meta["urls"] == [dead, f"{server}/"]
+    assert meta["url"] is None
+    assert meta["summary"]["switches"], "summary should list the switch"
+
+
+def test_urls_mode_late_errors_from_old_target_do_not_thrash(server, tmp_path):
+    """Regression for the E6b-r01 thrash: open-loop requests in flight to the
+    dead primary return as errors AFTER the switch to the healthy secondary.
+    Those late errors must stick to the old active_url and never trigger a
+    second switch back.
+
+    Primary is a port that silently drops SYNs (non-routable address) so
+    connects wait out the timeout; secondary is the healthy server. The
+    prober should switch once and stay there.
+    """
+    blackhole = "http://10.255.255.1:81/"
+    rc = prober.main(["--urls", f"{blackhole},{server}/", "--run-id", "t5-r07-latebug",
+                      "--rate", "40", "--duration", "3",
+                      "--switch-after", "3",
+                      "--connect-timeout", "0.4", "--total-timeout", "0.5",
+                      "--results-dir", str(tmp_path), "--quiet"])
+    assert rc == 0
+    run_dir = tmp_path / "t5" / "t5-r07-latebug"
+    events = read_csv(run_dir / "events.csv")
+    switches = [e for e in events if e["event"] == "switch_target"]
+    # Exactly one switch: blackhole -> healthy. No bounces back.
+    assert len(switches) == 1, f"expected 1 switch, got {len(switches)}: {switches}"
+    assert blackhole in switches[0]["detail"]
+    assert switches[0]["detail"].index(blackhole) < switches[0]["detail"].index(server)
+    # Late errors from the blackhole are still recorded on the CSV with their
+    # own active_url, but did not drive another switch.
+    rows = read_csv(run_dir / "prober.csv")
+    late_blackhole_errors = [r for r in rows
+                             if r["active_url"] == blackhole and r["error_class"]]
+    assert late_blackhole_errors, "test is meaningless unless late errors arrived"
+
+
+def test_urls_mode_requires_exactly_two_urls(server, tmp_path):
+    with pytest.raises(SystemExit):
+        prober.main(["--urls", server + "/", "--run-id", "t5-r05-one",
+                     "--duration", "0.1", "--results-dir", str(tmp_path), "--quiet"])
+    with pytest.raises(SystemExit):
+        prober.main(["--urls", f"{server}/,{server}/,{server}/",
+                     "--run-id", "t5-r06-three",
+                     "--duration", "0.1", "--results-dir", str(tmp_path), "--quiet"])

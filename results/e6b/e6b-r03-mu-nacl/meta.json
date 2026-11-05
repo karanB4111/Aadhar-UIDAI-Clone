@@ -1,0 +1,66 @@
+{
+  "run_id": "e6b-r03-mu-nacl",
+  "url": null,
+  "urls": [
+    "http://aadhaar-tier3-mu-alb-734977341.ap-south-1.elb.amazonaws.com",
+    "http://aadhaar-tier3-hy-alb-1132399541.ap-south-2.elb.amazonaws.com"
+  ],
+  "switch_after": 3,
+  "rate_per_s": 20.0,
+  "duration_s": 360.0,
+  "connect_timeout_s": 2.0,
+  "total_timeout_s": 5.0,
+  "new_connection_per_request": true,
+  "actions": [
+    {
+      "at_s": 60.0,
+      "event": "inject_start",
+      "command": "bash tests/e6b_inject.sh"
+    },
+    {
+      "at_s": 300.0,
+      "event": "restore",
+      "command": "bash tests/e6b_restore.sh"
+    }
+  ],
+  "git_sha": "02d4ca5",
+  "image_tag": "02d4ca5",
+  "client_location": "home",
+  "client_network": "wifi",
+  "tool_versions": {
+    "prober": "3",
+    "python": "3.13.5",
+    "os": "macOS-26.6.2-arm64-arm-64bit-Mach-O"
+  },
+  "extra": {
+    "hc_interval": "5",
+    "tier": "3"
+  },
+  "summary": {
+    "started_utc_ms": 1793899706596,
+    "ended_utc_ms": 1793900066559,
+    "requests": 7200,
+    "counts": {
+      "ok": 7097,
+      "timeout": 103,
+      "conn_error": 0,
+      "http_5xx": 0,
+      "http_other": 0
+    },
+    "send_lag_ms": {
+      "p50": 3.431249991990626,
+      "p99": 10.044207912869751,
+      "max": 16.520457924343646
+    },
+    "actions_not_run": [],
+    "switches": [
+      {
+        "t_utc_ms": 1793899777404,
+        "from_url": "http://aadhaar-tier3-mu-alb-734977341.ap-south-1.elb.amazonaws.com",
+        "to_url": "http://aadhaar-tier3-hy-alb-1132399541.ap-south-2.elb.amazonaws.com",
+        "at_seq": 1316
+      }
+    ]
+  },
+  "written_utc": "2026-11-05T17:34:26+00:00"
+}

@@ -1,0 +1,66 @@
+{
+  "run_id": "e6a-r03-mu-evac",
+  "url": null,
+  "urls": [
+    "http://aadhaar-tier3-mu-alb-734977341.ap-south-1.elb.amazonaws.com",
+    "http://aadhaar-tier3-hy-alb-1132399541.ap-south-2.elb.amazonaws.com"
+  ],
+  "switch_after": 3,
+  "rate_per_s": 20.0,
+  "duration_s": 360.0,
+  "connect_timeout_s": 2.0,
+  "total_timeout_s": 5.0,
+  "new_connection_per_request": true,
+  "actions": [
+    {
+      "at_s": 60.0,
+      "event": "inject_start",
+      "command": "aws autoscaling update-auto-scaling-group --auto-scaling-group-name aadhaar-tier3-mu-asg --min-size 0 --desired-capacity 0 --region ap-south-1"
+    },
+    {
+      "at_s": 300.0,
+      "event": "restore",
+      "command": "aws autoscaling update-auto-scaling-group --auto-scaling-group-name aadhaar-tier3-mu-asg --min-size 1 --desired-capacity 2 --region ap-south-1"
+    }
+  ],
+  "git_sha": "02d4ca5",
+  "image_tag": "02d4ca5",
+  "client_location": "home",
+  "client_network": "wifi",
+  "tool_versions": {
+    "prober": "2",
+    "python": "3.13.5",
+    "os": "macOS-26.6.2-arm64-arm-64bit-Mach-O"
+  },
+  "extra": {
+    "hc_interval": "5",
+    "tier": "3"
+  },
+  "summary": {
+    "started_utc_ms": 1793897742888,
+    "ended_utc_ms": 1793898102844,
+    "requests": 7200,
+    "counts": {
+      "ok": 7196,
+      "timeout": 0,
+      "conn_error": 0,
+      "http_5xx": 4,
+      "http_other": 0
+    },
+    "send_lag_ms": {
+      "p50": 3.4370828652754426,
+      "p99": 5.28575002681464,
+      "max": 18.73816701117903
+    },
+    "actions_not_run": [],
+    "switches": [
+      {
+        "t_utc_ms": 1793897818932,
+        "from_url": "http://aadhaar-tier3-mu-alb-734977341.ap-south-1.elb.amazonaws.com",
+        "to_url": "http://aadhaar-tier3-hy-alb-1132399541.ap-south-2.elb.amazonaws.com",
+        "at_seq": 1519
+      }
+    ]
+  },
+  "written_utc": "2026-11-05T17:01:43+00:00"
+}

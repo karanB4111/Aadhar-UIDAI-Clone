@@ -234,6 +234,134 @@ or `autoscale_timeline.png`) under `results/<exp>/charts/`.
 - No Locust CPU-bound warnings in the console.
 - `served_by.json` / the ASG metric shows the instance count you expected.
 
+## Step 11: driving E6a / E6b against two regional ALBs
+
+Tier 3 is built as two independent regional stacks (Mumbai + Hyderabad)
+with **no Route 53** (O1 descoped — see `infra/envs/tier3/README.md`).
+The measurement is **client-side failover**: the prober holds both ALB
+URLs and switches to the secondary after N consecutive errors on the
+primary. This is a lower bound on the Route 53 case the paper design
+describes.
+
+### Prober `--urls` mode
+
+```
+python tests/prober.py --urls <primary>,<secondary> --run-id <exp>-r<NN>-<...>
+    [--switch-after 3]            # consecutive errors before switch (default 3)
+    [--duration 300]
+    [--rate 20]                   # default 20/s, same as single-URL mode
+    [--action AT_S EVENT COMMAND] # usual injections; repeatable
+```
+
+- Positional `url` and `--urls` are mutually exclusive.
+- The CSV gets an extra column `active_url` (the base URL that served each
+  request). Single-URL runs set it too, and it is constant there.
+- Every switch appends a `switch_target` row to `events.csv`:
+  `switch_target  <primary> -> <secondary> after 3 consecutive errors`.
+- `meta.json` has new fields `urls` (list of 2), `switch_after`, and
+  `summary.switches` (one object per switch with `t_utc_ms`, `from_url`,
+  `to_url`, `at_seq`).
+- Single-URL callers (step-4/7/9 scripts) are unchanged.
+
+### E6a: planned Mumbai evacuation
+
+**Fault:** scale Mumbai's ASG to desired 0 (no healthy instances), so the
+ALB returns 503 "no healthy targets" and the prober switches to Hyderabad.
+Restore by setting desired back to 2.
+
+Preconditions: `infra/envs/tier3` applied; both regions healthy
+(`curl $MU/` and `curl $HY/` each return a 200 with the right region).
+
+```bash
+export AWS_PROFILE=aadhaar
+cd infra/envs/tier3
+URLS=$(terraform output -raw prober_urls)
+MU_ASG=$(terraform output -raw mumbai_asg_name)
+cd ../../..
+
+python tests/prober.py --urls "$URLS" --run-id e6a-r01-mu-evac \
+    --rate 20 --duration 360 \
+    --image-tag $(git rev-parse --short HEAD) --network wired \
+    --client-location "DAU campus" --switch-after 3 \
+    --meta hc_interval=5 --meta tier=3 \
+    --action 60  inject_start "aws autoscaling set-desired-capacity \
+       --auto-scaling-group-name $MU_ASG --desired-capacity 0 --region ap-south-1" \
+    --action 300 restore      "aws autoscaling set-desired-capacity \
+       --auto-scaling-group-name $MU_ASG --desired-capacity 2 --region ap-south-1"
+```
+
+- Repeat **3 times** (ARCHITECTURE.md 8.5 / PLAN "minimum 3 runs").
+- Alternate `--run-id` suffix. Target is always Mumbai here (set identifier
+  in the run id is for the AZ or region being evicted, so `mu-evac`).
+
+### E6b: unplanned Mumbai region loss
+
+**Fault:** attach the deny-all network ACL to Mumbai's two app subnets so
+instances become unreachable from the ALB (8.6). ALB health checks time
+out, targets go unhealthy, the ALB returns 503, and the prober switches
+to Hyderabad.
+
+Finding the subnet IDs once per run (Terraform does not expose a module
+output for them yet; shell out):
+
+```bash
+export AWS_PROFILE=aadhaar
+MU_VPC=$(aws ec2 describe-vpcs --region ap-south-1 \
+  --filters 'Name=tag:Name,Values=aadhaar-tier3-mu' --query 'Vpcs[0].VpcId' --output text)
+MU_APP_SUBNETS=$(aws ec2 describe-subnets --region ap-south-1 \
+  --filters "Name=vpc-id,Values=$MU_VPC" 'Name=tag:Role,Values=app' \
+  --query 'Subnets[*].SubnetId' --output text)
+MU_DENY_NACL=$(aws ec2 describe-network-acls --region ap-south-1 \
+  --filters "Name=vpc-id,Values=$MU_VPC" 'Name=tag:Name,Values=aadhaar-tier3-mu-deny-all' \
+  --query 'NetworkAcls[0].NetworkAclId' --output text)
+
+# Record the current (default) ACL associations so we can restore them.
+for sn in $MU_APP_SUBNETS; do
+  aws ec2 describe-network-acls --region ap-south-1 \
+    --filters "Name=association.subnet-id,Values=$sn" \
+    --query "NetworkAcls[0].Associations[?SubnetId=='$sn'].[NetworkAclAssociationId,NetworkAclId]" \
+    --output text
+done | tee /tmp/mu-acl-assoc.txt
+```
+
+Each line in `/tmp/mu-acl-assoc.txt` is `<assoc-id> <default-nacl-id>`. The
+injection replaces each `assoc-id` with `MU_DENY_NACL`; the restore replaces
+each `assoc-id` with the default NACL id back. Write the two multi-line
+commands in advance and paste them into `--action` strings, or wrap them
+in `tests/e6b_inject.sh` / `tests/e6b_restore.sh` on your laptop (they are
+specific to the current `assoc-id`s and are not committed).
+
+Run shape (5 runs, ARCHITECTURE.md 8.4 E6b):
+
+```bash
+cd infra/envs/tier3
+URLS=$(terraform output -raw prober_urls)
+cd ../../..
+
+python tests/prober.py --urls "$URLS" --run-id e6b-r01-mu-nacl \
+    --rate 20 --duration 360 \
+    --image-tag $(git rev-parse --short HEAD) --network wired \
+    --client-location "DAU campus" --switch-after 3 \
+    --meta hc_interval=5 --meta tier=3 \
+    --action 60  inject_start "bash tests/e6b_inject.sh" \
+    --action 300 restore      "bash tests/e6b_restore.sh"
+```
+
+**Pass criterion (ARCHITECTURE.md 8.4 E6b):** error window ≤ 120 s in at
+least 4 of 5 runs (predicted 20–105 s by Route 53; the client-side case
+should be *faster* because the prober only waits `--switch-after` × interval,
+with no DNS caching). 100% success from Hyderabad afterwards. Report the
+failback time (time from the deny-all NACL being removed until the prober
+switches back to Mumbai), which here is `--switch-after` error samples on
+the current secondary.
+
+### Analysing E6a / E6b
+
+The step-7 analyser (`analysis/analyze.py`) works on single-target runs.
+For the `--urls` CSVs the new `active_url` column makes the switch visible;
+add a simple summary (first switch time, number of switches, error window,
+rejoin time) in `analysis/analyze_tier3.py` — not written yet.
+
 ## Unit tests
 
 ```bash

@@ -1,0 +1,6 @@
+t_utc_ms,event,detail,run_id
+1793899706596,probe_start,"20.0/s to [0:aadhaar-tier3-mu-alb-734977341.ap-south-1.elb.amazonaws.com, 1:aadhaar-tier3-hy-alb-1132399541.ap-south-2.elb.amazonaws.com], switch_after=3",e6b-r03-mu-nacl
+1793899773544,inject_start,bash tests/e6b_inject.sh (exit 0),e6b-r03-mu-nacl
+1793899777404,switch_target,http://aadhaar-tier3-mu-alb-734977341.ap-south-1.elb.amazonaws.com -> http://aadhaar-tier3-hy-alb-1132399541.ap-south-2.elb.amazonaws.com after 3 consecutive errors,e6b-r03-mu-nacl
+1793900009082,restore,bash tests/e6b_restore.sh (exit 0),e6b-r03-mu-nacl
+1793900066559,probe_end,7200 requests scheduled,e6b-r03-mu-nacl
