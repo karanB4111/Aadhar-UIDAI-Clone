@@ -36,7 +36,11 @@ managed), final sweep confirms 0 project resources in either region.
 Week 3 report §6.1 updated), 4.2% of the USD 100 free-account credit.
 **All 12 build steps done.** Open reviews: steps 1–6, 8–12 (see Status
 column); open content item: Khushi G7 leftover (reference-list access
-dates) before submission.
+dates) before submission. **Step 13 (new, 2026-11-06)**: Khushi to build
+a small live-polling demo frontend served by the FastAPI service at
+`GET /demo`, so the prof's "Chaos/Failover Test" demonstration is a
+visual dashboard instead of a prober terminal. Spec at the bottom of
+section 6.
 The live tracker is the **Status** column in
 [section 6](#6-work-steps-after-approval).
 
@@ -219,14 +223,92 @@ project stands, for all three of us and for any AI agent working in the repo.
 | 10 | Report updates: fix G1–G7, new diagrams, measured results, actual cost + billing screenshot | Khushi | All | Week 3 add-ons ready | ✅ Done `<pending>` · review pending (All) — `report/WEEK3.md` created. G1–G7 closed (section 1), as-built Tier 1 + Tier 2 diagrams (section 2), measured failover window E1 11.5 s / E2 12.45 s / E1b 36.4 s and Tier 2 self-healing 130 s (section 3), scaling E5a per-instance split and E5b scale-out 5–7 min / scale-in ~17 min (section 4), SLA availability rollup (section 5), planning-cost paragraph with `AWS action needed: Jeel — Cost Explorer screenshot for November 2026` as the one open item before submission (section 6). Tier 3 stays paper design (section 7), pending O1. |
 | 11 | Tier 3: second region (Hyderabad), **client-side** failover (O1 descoped) | Jeel | All | Region failover measured | ✅ Done `3a5fead` · review pending (All) — Tier 3 applied once on AWS 2026-11-05 (both regions came up healthy on image `6cc656f`; Hyderabad serving from AZs 2a+2b, Mumbai from 1a+1b), 8 measurement runs taken, Tier 3 stack destroyed. **E6a (3 runs)**: planned Mumbai evacuation via ASG min/desired=0 — median time-to-switch **~13.7 s** (range 12.4–13.9), 4–5 ALB 5xx per run, 0 errors after switch, Hyderabad took every request. **E6b (5 runs r02–r06, prober v3)**: unplanned Mumbai loss via deny-all NACL on app subnets — median time-to-switch **~3.9 s** (range 3.3–5.3), 103 timeouts per run (= the open-loop's in-flight count at inject moment), 0 errors after drain, 1 switch per run. **E6b-r01 (prober v2)** is kept as a documented finding: late timeouts from the dead primary thrashed the switch decision (38 switch events in ~8 s) — fixed in prober v3 (switch decisions now use the request's own `active_url`, regression test `test_urls_mode_late_errors_from_old_target_do_not_thrash` pins it). See `results/e6a/README.md` and `results/e6b/README.md`. Measurement caveat: these are **client-side** failover numbers, a lower bound on the Route 53 case the paper design describes. |
 | 12 | `terraform destroy`, confirm the bill | Jeel | Kanu | No resources left running | ✅ Done `09ee338` · review pending (Kanu) — all `envs/*` already destroyed in earlier steps. 2026-11-06: `global/ecr` destroyed (image `6cc656f` + two untagged platform manifests `20aae8f...` and `ee40f77...` deleted first; Hyderabad replica repo was NOT Terraform-managed — replication creates it, destroying the replication rule does not — so it was deleted manually by `aws ecr delete-repository --region ap-south-2`); `bootstrap/` destroyed (bucket versions + delete markers cleared first). Final sweep: 0 EC2, 0 ALB, 0 project VPC, 0 ECR repo, 0 state bucket in both regions. **Final November 2026 bill: USD 4.20 incl. 18% GST** (pre-tax USD 3.56 — ALB USD 1.40, EC2+EBS USD 0.94, public IPv4 USD 0.94, non-project KMS keys in eu-north-1/us-west-2 USD 0.28; everything else inside free tier). Report `report/billing-nov-2026.pdf` + §6.1 updated with actuals. Within USD 10 Budgets tripwire (2.4× margin) and 4.2% of the USD 100 free-account credit (D9). |
+| 13 | Demo frontend for the prof: live polling dashboard served by the FastAPI service | Khushi | Kanu | Dashboard served at `GET /demo` on the ALB, visually shows AZ a / AZ b / error for each poll in real time | ⬜ Not started — see spec below |
 
-**Workload split (steps 1–12, excluding step 0 which is shared):**
+**Workload split (steps 1–13, excluding step 0 which is shared):**
 
 | Member | Owns | Reviews | Mix of work |
 |---|---|---|---|
 | Jeel Thummar | 6, 8, 11, 12 | 2, 5, 9 | Terraform / infra across all three tiers, teardown |
-| Kanu Bhadaraka | 2, 4, 9 | 1, 3, 6, 10, 11, 12 | Service code, test tooling |
-| Khushi Pandya | 1, 3, 5, 7, 10 | 4, 8, 10, 11 | Repo setup, local rehearsal, analysis, Tier 1 tests, report |
+| Kanu Bhadaraka | 2, 4, 9 | 1, 3, 6, 10, 11, 12, 13 | Service code, test tooling |
+| Khushi Pandya | 1, 3, 5, 7, 10, 13 | 4, 8, 10, 11 | Repo setup, local rehearsal, analysis, Tier 1 tests, report, demo UI |
+
+---
+
+### Step 13: demo frontend — spec for Khushi
+
+**Why this step exists.** The professor's brief (received 2026-11-06, in
+chat) asks for a **live demonstration of a "Chaos/Failover Test"**. The
+prober output we used in step 7 is CSV in a terminal — fine for a report,
+hard to watch live. A small dashboard served by the FastAPI service turns
+the failover story into something the prof can see at a glance.
+
+**What to build.** A single-page live polling dashboard, served by the
+service itself at `GET /demo`. Same-origin keeps it trivial — no CORS, no
+hosting, no extra component to deploy. When the prof opens
+`http://<alb-dns>/demo` in a browser:
+
+1. The page polls `GET /` on the SAME ALB every 500 ms via `fetch()`, with
+   `cache: "no-store"` and a cache-busting query param so each request is a
+   fresh hit the ALB can round-robin.
+2. Every response adds one coloured tile to a horizontal strip showing
+   which AZ answered:
+   - green tile for `az = "ap-south-1a"`
+   - blue tile for `az = "ap-south-1b"`
+   - red tile for an error (timeout, 5xx, or `fetch` rejection)
+3. A live counter row shows: total requests, ok, errors, current p50
+   latency, current p99 latency (over the last 100 requests).
+4. Two big current-state boxes: **AZ-a: healthy / unhealthy** and **AZ-b:
+   healthy / unhealthy**, decided by "did we see a response from this AZ
+   in the last 5 s". Red when unhealthy.
+5. A rolling log (max 50 rows) below the strip: timestamp, az, status,
+   latency_ms.
+
+**Where it lives in the code.** One file, served from FastAPI:
+
+- `service/static/demo.html` — the single HTML file (inline CSS + inline
+  vanilla JS, no build step, no npm, no React). Khushi's file.
+- `service/main.py` — add ONE route:
+  `@app.get("/demo", response_class=HTMLResponse)` that reads and returns
+  `static/demo.html`. This is the only edit to Kanu's file; keep the diff
+  to <10 lines. Ping Kanu in group chat when the PR lands so he reviews
+  that specific change in the same pass as step 13.
+- The existing `GET /` endpoint already returns `instance_id`, `az`,
+  `region`, `app_version` — the dashboard uses those straight from the
+  JSON response. **No other service-side changes.**
+- Rebuild the Docker image after the change (new short SHA → new ECR
+  push → update `image_tag` in `envs/tier1/terraform.tfvars` for the
+  demo re-apply).
+
+**Why it demonstrates what the prof asked for.** The prof's step-by-step
+items 3 (two AZs), 4 (load balancer distributing traffic) and 5 (failover
+test) all become **visible on one screen**:
+
+- Under normal load, the strip alternates green/blue — that's the ALB's
+  round-robin across AZs (item 3 + 4).
+- When Jeel stops the AZ-a instance, the strip turns solid blue within
+  ~10–12 s. The AZ-a box flips to red "unhealthy". That's item 5.
+- When the instance comes back, the strip returns to alternating. The
+  AZ-a box flips back to green.
+
+**Tie-in to committed evidence.** The dashboard is the *live* view; the
+`results/e1/` CSVs are the *recorded* evidence. In the demo, start the
+dashboard, kill the instance, let the prof watch. Afterwards show
+`results/e1/charts/latency_timeline.png` and say "five earlier runs, all
+inside 10–15 s; the live one you just saw matches."
+
+**Testing.** Run against local rehearsal first (`local/docker-compose.yml`
++ nginx, step 3). Kill one container; dashboard should show the same
+visual story on a local two-AZ-simulated setup. Then test against the
+real ALB during a brief Tier 1 re-apply the day before the demo.
+
+**Cost.** None beyond the Tier 1 re-apply Jeel already does for the demo.
+The dashboard is served by the existing container; no new AWS resources.
+
+**Non-goals.** No login, no WebSockets (polling is fine at 2 Hz), no
+charts library (one SVG strip + one `<pre>` log + four counters). Keep it
+under 200 lines total. If it takes more than an evening, cut scope rather
+than growing it.
 
 Each member owns at least one build task and one measurement or
 documentation task, so no one is limited to a single kind of work.
